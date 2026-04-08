@@ -1,0 +1,357 @@
+.dashboard__wrapper {
+  min-height: 100vh;
+  padding: 110px 24px 60px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dashboard__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard__greeting {
+  font-size: 32px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+
+.dashboard__sub {
+  font-size: 15px;
+  color: rgba(255,255,255,0.55);
+}
+
+/* Stats */
+.dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.ds-card {
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ds-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ds-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.ds-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 500;
+}
+
+/* Tabs */
+.dashboard__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--radius-full) !important;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  transition: all var(--transition-base);
+}
+
+.tab-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+}
+
+/* Panel */
+.dashboard__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-section {
+  padding: 28px;
+}
+
+.panel-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 16px;
+}
+
+.panel-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 16px;
+}
+
+.panel-sub code {
+  background: rgba(255,255,255,0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--primary-light);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+/* Event form */
+.event-form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed rgba(255,255,255,0.2);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: center;
+  background: rgba(255,255,255,0.04);
+  margin-bottom: 16px;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--primary);
+  background: rgba(99,102,241,0.08);
+}
+
+.drop-zone.has-file {
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.05);
+}
+
+.drop-zone__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.drop-zone__empty p {
+  font-size: 15px;
+  color: rgba(255,255,255,0.5);
+}
+
+.dz-browse {
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dz-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+}
+
+.drop-zone__file {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: center;
+}
+
+.dz-filename {
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  font-size: 15px;
+}
+
+.dz-size {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+}
+
+/* Spinners */
+.spinner-dark {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(30,30,60,0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin-slow 0.7s linear infinite;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  justify-content: center;
+  color: rgba(255,255,255,0.5);
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin-slow 0.8s linear infinite;
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 60px 20px;
+  color: rgba(255,255,255,0.4);
+  font-size: 15px;
+}
+
+/* Table */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.preview-table,
+.certs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.preview-table th,
+.certs-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255,255,255,0.45);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.preview-table td,
+.certs-table td {
+  padding: 14px;
+  color: rgba(255,255,255,0.8);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  vertical-align: middle;
+}
+
+.preview-table tr:last-child td,
+.certs-table tr:last-child td {
+  border-bottom: none;
+}
+
+.certs-table tr:hover td {
+  background: rgba(255,255,255,0.04);
+}
+
+.cert-name {
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+
+.cert-email {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+}
+
+.cert-id {
+  font-size: 12px;
+  background: rgba(99,102,241,0.15);
+  color: var(--primary-light);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.cert-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.csv-preview {
+  margin-bottom: 16px;
+}
+
+.preview-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+.certs-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.certs-header .panel-title {
+  margin-bottom: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .event-form {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard__wrapper {
+    padding: 100px 16px 40px;
+  }
+}

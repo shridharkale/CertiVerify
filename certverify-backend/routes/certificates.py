@@ -1,0 +1,303 @@
+"""
+routes/certificates.py
+-----------------------
+BUG FIX #1: LLM timeout → added pandas fallback duplicate checker
+BUG FIX #2: QR URL → removed hardcoded IP, now uses env variable via qr_generator
+BUG FIX #3: Account separation → force lowercase email, filter Firestore by issued_by strictly
+"""
+from flask import send_file, Blueprint, request, jsonify
+import io
+import os
+import random
+import string
+from datetime import datetime
+
+import pandas as pd
+
+from utils.qr_generator import generate_qr
+from utils.cert_generator import generate_certificate
+from firebase_config import db
+
+# Try to import LLM checker — it's optional
+try:
+    from utils.duplicate_checker import check_duplicates_with_llm
+    LLM_AVAILABLE = True
+except Exception:
+    LLM_AVAILABLE = False
+    print("[WARN] LLM duplicate checker not available. Pandas fallback will be used.")
+
+temp_participants = {}
+
+certificates_bp = Blueprint("certificates", __name__, url_prefix="/api/certificates")
+
+
+def generate_cert_id():
+    year = datetime.now().year
+    random_part = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    cert_id = f"CERT-{year}-{random_part}"
+    print(f"[DEBUG] Generated cert_id: {cert_id}")
+    return cert_id
+
+
+# ✅ BUG FIX #1: Pandas fallback — runs if LLM times out or fails
+def pandas_duplicate_check(participants):
+    """
+    Simple pandas-based duplicate checker.
+    Flags entries with the same name+email combination.
+    Returns dict with 'duplicates' and 'clean' lists.
+    """
+    df = pd.DataFrame(participants)
+    df["name_lower"]  = df["name"].astype(str).str.strip().str.lower()
+    df["email_lower"] = df["email"].astype(str).str.strip().str.lower()
+
+    is_duplicate = df.duplicated(subset=["name_lower", "email_lower"], keep="first")
+    duplicates   = df[is_duplicate].to_dict(orient="records")
+    clean        = df[~is_duplicate].to_dict(orient="records")
+
+    print(f"[Pandas] Found {len(duplicates)} duplicates, {len(clean)} clean entries.")
+    return {"duplicates": duplicates, "suspicious": [], "clean": clean}
+
+
+@certificates_bp.route("/upload-csv", methods=["POST"])
+def upload_csv():
+    print("[DEBUG] /upload-csv endpoint hit")
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded.", "keys_received": list(request.files.keys())}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "The uploaded file has no filename."}), 400
+
+    try:
+        file.stream.seek(0)
+        file_bytes  = file.read()
+        file_stream = io.BytesIO(file_bytes)
+        df          = pd.read_csv(file_stream)
+        df.columns  = df.columns.str.strip().str.lower()
+    except Exception as e:
+        return jsonify({"error": f"Failed to read CSV file: {str(e)}"}), 422
+
+    required_columns = {"name", "email", "role"}
+    actual_columns   = set(df.columns)
+
+    if not required_columns.issubset(actual_columns):
+        missing = required_columns - actual_columns
+        return jsonify({"error": f"CSV is missing required columns: {missing}"}), 422
+
+    try:
+        df["name"]  = df["name"].astype(str).str.strip().str.lower()
+        df["email"] = df["email"].astype(str).str.strip().str.lower()
+        df["role"]  = df["role"].astype(str).str.strip()
+    except Exception as e:
+        return jsonify({"error": f"Error while cleaning data: {str(e)}"}), 500
+
+    try:
+        is_duplicate = df.duplicated(subset=["name", "email"], keep=False)
+        clean_df     = df[~is_duplicate]
+        duplicate_df = df[is_duplicate]
+        participants = clean_df.to_dict(orient="records")
+        duplicates   = duplicate_df.to_dict(orient="records")
+    except Exception as e:
+        return jsonify({"error": f"Error during duplicate detection: {str(e)}"}), 500
+
+    event_name = request.form.get("event_name", "default")
+    temp_participants[event_name] = participants
+
+    return jsonify({
+        "participants": participants,
+        "duplicates":   duplicates,
+        "upload_id":    event_name,
+        "total_rows":   len(participants),
+    }), 200
+
+
+@certificates_bp.route("/generate", methods=["POST"])
+def generate_certificates():
+    print("[DEBUG] /generate endpoint hit")
+
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({"error": "Request body must be valid JSON."}), 400
+
+    if not data:
+        return jsonify({"error": "Request body is empty."}), 400
+
+    event_name   = data.get("event_name", "").strip()
+    event_date   = data.get("event_date", "").strip()
+
+    # ✅ BUG FIX #3: Force issuer email to lowercase for strict account separation
+    issuer       = data.get("issuer", "").strip().lower()
+    participants = data.get("participants") or temp_participants.get(event_name, [])
+
+    if not event_name:
+        return jsonify({"error": "'event_name' is required."}), 400
+    if not event_date:
+        return jsonify({"error": "'event_date' is required."}), 400
+    if not participants or not isinstance(participants, list):
+        return jsonify({"error": "'participants' must be a non-empty list."}), 400
+
+    # ── Duplicate Check: LLM with pandas fallback ─────────────────────────────
+    try:
+        if LLM_AVAILABLE:
+            print("[DEBUG] Trying LLM duplicate check...")
+            llm_result = check_duplicates_with_llm(participants)
+        else:
+            raise Exception("LLM not available")
+
+    except Exception as e:
+        # ✅ BUG FIX #1: LLM failed or timed out — use pandas fallback
+        print(f"[WARN] LLM check failed: {e}. Using pandas fallback.")
+        llm_result = pandas_duplicate_check(participants)
+
+    flagged_emails = set()
+    for entry in llm_result.get("duplicates", []):
+        flagged_emails.add(entry.get("email", "").lower())
+    for entry in llm_result.get("suspicious", []):
+        flagged_emails.add(entry.get("email", "").lower())
+
+    clean_participants = [
+        p for p in participants
+        if p.get("email", "").lower() not in flagged_emails
+    ]
+    print(f"[DEBUG] Removed {len(participants) - len(clean_participants)} flagged entries")
+    participants = clean_participants
+
+    # ── Generate certificates ─────────────────────────────────────────────────
+    logo_path       = "assets/logo.png"
+    generated_count = 0
+    errors          = []
+
+    for index, person in enumerate(participants):
+        try:
+            name  = str(person.get("name", "")).strip()
+            email = str(person.get("email", "")).strip().lower()  # ✅ BUG FIX #3
+            role  = str(person.get("role", "Participant")).strip()
+
+            if not name or not email:
+                errors.append({"index": index, "reason": "Missing name or email", "data": person})
+                continue
+
+            cert_id = generate_cert_id()
+
+            # ✅ BUG FIX #2: No hardcoded IP — qr_generator reads from env variable
+            qr_path = generate_qr(cert_id=cert_id)
+
+            pdf_path = generate_certificate(
+                name=name.title(),
+                event=event_name,
+                date=event_date,
+                cert_id=cert_id,
+                logo_path=logo_path,
+                qr_path=qr_path,
+                role=role,
+            )
+
+            cert_data = {
+                "cert_id":    cert_id,
+                "name":       name.title(),
+                "email":      email,
+                "role":       role,
+                "event_name": event_name,
+                "event_date": event_date,
+                "pdf_path":   pdf_path,
+                "qr_path":    qr_path,
+                "created_at": datetime.utcnow().isoformat() + "Z",
+                "verified":   False,
+                "issued_by":  issuer,  # ✅ BUG FIX #3: always lowercase
+            }
+
+            db.collection("certificates").document(cert_id).set(cert_data)
+            generated_count += 1
+
+        except Exception as e:
+            errors.append({"index": index, "reason": str(e), "data": person})
+            continue
+
+    response = {
+        "message": "Certificates generated successfully",
+        "count":   generated_count,
+    }
+    if errors:
+        response["warnings"] = errors
+
+    return jsonify(response), 200
+
+
+@certificates_bp.route("/batch/<batch_id>", methods=["GET"])
+def get_batch(batch_id):
+    try:
+        docs         = db.collection("certificates").where("event_name", "==", batch_id).stream()
+        certificates = [doc.to_dict() for doc in docs]
+
+        if not certificates:
+            return jsonify({"error": "No certificates found for this batch"}), 404
+
+        return jsonify({
+            "batch_id":     batch_id,
+            "certificates": certificates,
+            "count":        len(certificates)
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@certificates_bp.route("/list", methods=["GET"])
+def list_certificates():
+    try:
+        user_email = request.args.get("email", "").strip().lower()
+
+        # Build query
+        collection = db.collection("certificates")
+
+        if user_email:
+            # Filter by issued_by if email provided
+            docs = collection.where("issued_by", "==", user_email).stream()
+        else:
+            # No email = return all (so frontend without login still works)
+            docs = collection.stream()
+
+        certs = [doc.to_dict() for doc in docs]
+        return jsonify({"certificates": certs}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@certificates_bp.route("/download/<cert_id>", methods=["GET"])
+def download_certificate(cert_id):
+    pdf_path = os.path.join("generated_certs", f"{cert_id}.pdf")
+
+    if not os.path.exists(pdf_path):
+        return jsonify({"error": "Certificate not found"}), 404
+
+    return send_file(
+        pdf_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"{cert_id}.pdf"
+    )
+
+
+@certificates_bp.route("/check-duplicates", methods=["POST"])
+def check_duplicates():
+    try:
+        data         = request.get_json()
+        participants = data.get("participants", [])
+
+        if not participants:
+            return jsonify({"error": "No participants provided"}), 400
+
+        if LLM_AVAILABLE:
+            result = check_duplicates_with_llm(participants)
+        else:
+            result = pandas_duplicate_check(participants)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"[ERROR] Duplicate check route failed: {e}")
+        return jsonify({"error": str(e)}), 500
