@@ -14,7 +14,10 @@ app = Flask(__name__)
 # ── Enable CORS ───────────────────────────────────────────────────────────────
 # This lets the frontend (React/Next.js) communicate with this backend
 # without getting blocked by the browser's same-origin policy.
-CORS(app)
+CORS(app,origins=[
+    "http://localhost:5173",
+    "https://CertiVerify.vercel.app"
+])
 
 # ── Register Blueprints (route groups) ────────────────────────────────────────
 # Each blueprint lives in its own file under routes/
