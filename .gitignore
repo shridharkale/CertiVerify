@@ -1,0 +1,19 @@
+# Python junk
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Node junk
+node_modules/
+dist/
+
+# SECRET FILES - never push these
+.env
+.env.local
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+# Mac/Windows system files
+.DS_Store
+Thumbs.db
