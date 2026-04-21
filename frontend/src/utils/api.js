@@ -1,10 +1,9 @@
 import axios from 'axios';
 
 // ─── Base URL ───────────────────────────────────────────────────────────
-// When you connect to the Flask backend, set VITE_API_BASE_URL in .env
-// e.g. VITE_API_BASE_URL=http://localhost:5000/api
-// For development without a backend, requests will hit /api (proxied by vite)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+// For GitHub Pages: set VITE_API_BASE_URL in frontend/.env
+// For local dev:    set VITE_API_BASE_URL=http://192.168.1.134:5000/api
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.134:5000/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -33,10 +32,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('cv_token');
       localStorage.removeItem('cv_user');
-      window.location.href = '/login';
+      window.location.href = '/#/login';
     }
     return Promise.reject(error);
   }
 );
+
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('cv_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
 export default api;

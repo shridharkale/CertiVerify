@@ -16,9 +16,12 @@ export default function Dashboard() {
   const [tab, setTab] = useState('upload');
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreview, setCsvPreview] = useState([]);
-  const [eventDetails, setEventDetails] = useState({ event_name: '', event_date: '', issuer: '' });
+
+  // ✅ Bug B — removed issuer from state entirely
+  const [eventDetails, setEventDetails] = useState({ event_name: '', event_date: '' });
+
   const [dragOver, setDragOver] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null); // null | 'loading' | 'success' | 'error'
+  const [uploadStatus, setUploadStatus] = useState(null);
   const [uploadMsg, setUploadMsg] = useState('');
   const [uploadId, setUploadId] = useState(null);
   const [genStatus, setGenStatus] = useState(null);
@@ -35,14 +38,19 @@ export default function Dashboard() {
   const fetchCertificates = async () => {
     setCertLoading(true);
     try {
+      // ✅ Bug A — token is now attached automatically via api.js interceptor
       const res = await api.get('/certificates/list');
       const list = res.data.certificates || [];
       setCertificates(list);
       const events = new Set(list.map(c => c.event_name)).size;
-      setStats({ total: list.length, events, recent: list.filter(c => {
-        const d = new Date(c.created_at);
-        return (Date.now() - d) < 7 * 24 * 3600 * 1000;
-      }).length });
+      setStats({
+        total: list.length,
+        events,
+        recent: list.filter(c => {
+          const d = new Date(c.created_at);
+          return (Date.now() - d) < 7 * 24 * 3600 * 1000;
+        }).length
+      });
     } catch {
       setCertificates([]);
     } finally {
@@ -59,7 +67,6 @@ export default function Dashboard() {
     setCsvFile(file);
     setUploadStatus(null);
     setUploadMsg('');
-    // Parse preview
     const reader = new FileReader();
     reader.onload = (e) => {
       const lines = e.target.result.split('\n').slice(0, 6);
@@ -90,8 +97,7 @@ export default function Dashboard() {
       setUploadId(res.data.upload_id);
       setUploadStatus('success');
       setUploadMsg(`✓ ${res.data.total_rows} recipients loaded. ${res.data.duplicates || 0} duplicates skipped.`);
-      
-      // LLM Duplicate Check
+
       try {
         const llmRes = await api.post('/certificates/check-duplicates', {
           participants: res.data.participants
@@ -109,17 +115,17 @@ export default function Dashboard() {
       setUploadStatus('error');
       setUploadMsg(err.response?.data?.message || 'Upload failed. Check your CSV format.');
     }
-};
+  };
 
   const handleGenerate = async () => {
     setGenStatus('loading');
     setGenMsg('');
     try {
-      const user = JSON.parse(localStorage.getItem('cv_user') || '{}');  // ← ADD THIS
+      // ✅ Bug B — no issuer sent; backend reads it from the auth token
       const res = await api.post('/certificates/generate', {
         upload_id: uploadId,
-        ...eventDetails,
-        issuer: user.email,  // ← ADD THIS
+        event_name: eventDetails.event_name,
+        event_date: eventDetails.event_date,
       });
       setGenStatus('success');
       setGenMsg(`🎉 ${res.data.count} certificates generated successfully!`);
@@ -129,7 +135,7 @@ export default function Dashboard() {
       setGenStatus('error');
       setGenMsg(err.response?.data?.message || 'Generation failed.');
     }
-};
+  };
 
   return (
     <div className="dashboard__wrapper">
@@ -205,7 +211,6 @@ export default function Dashboard() {
       {/* Upload Tab */}
       {tab === 'upload' && (
         <div className="dashboard__panel animate-fade-in">
-          {/* Event details */}
           <div className="panel-section glass-card">
             <h2 className="panel-title">Event Details</h2>
             <div className="event-form">
@@ -227,15 +232,7 @@ export default function Dashboard() {
                   onChange={e => setEventDetails({ ...eventDetails, event_date: e.target.value })}
                 />
               </div>
-              <div className="form-group">
-                <label className="label">Issued By</label>
-                <input
-                  className="input-glass"
-                  placeholder="e.g. TechConf India"
-                  value={eventDetails.issuer}
-                  onChange={e => setEventDetails({ ...eventDetails, issuer: e.target.value })}
-                />
-              </div>
+              {/* ✅ Bug B — "Issued By" field removed; backend reads issuer from auth token */}
             </div>
           </div>
 
@@ -272,7 +269,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* CSV Preview */}
             {csvPreview.headers && (
               <div className="csv-preview">
                 <p className="preview-label">Preview (first 5 rows)</p>
@@ -305,7 +301,9 @@ export default function Dashboard() {
                 onClick={handleUploadCSV}
                 disabled={!csvFile || uploadStatus === 'loading'}
               >
-                {uploadStatus === 'loading' ? <><span className="spinner-dark" /> Uploading...</> : <><UploadCloud size={16} /> Upload CSV</>}
+                {uploadStatus === 'loading'
+                  ? <><span className="spinner-dark" /> Uploading...</>
+                  : <><UploadCloud size={16} /> Upload CSV</>}
               </button>
 
               {uploadStatus === 'success' && (
@@ -315,7 +313,9 @@ export default function Dashboard() {
                   onClick={handleGenerate}
                   disabled={genStatus === 'loading'}
                 >
-                  {genStatus === 'loading' ? <><span className="spinner" /> Generating...</> : <><Play size={16} /> Generate Certificates</>}
+                  {genStatus === 'loading'
+                    ? <><span className="spinner" /> Generating...</>
+                    : <><Play size={16} /> Generate Certificates</>}
                 </button>
               )}
             </div>
@@ -369,7 +369,8 @@ export default function Dashboard() {
                     {certificates.map((cert, i) => (
                       <tr key={i}>
                         <td>
-                          <div className="cert-name">{cert.recipient_name}</div>
+                          {/* ✅ Bug C — cert.name (not cert.recipient_name) */}
+                          <div className="cert-name">{cert.name}</div>
                           <div className="cert-email">{cert.email}</div>
                         </td>
                         <td>{cert.event_name}</td>
@@ -385,10 +386,11 @@ export default function Dashboard() {
                             >
                               <Eye size={14} />
                             </button>
+                            {/* ✅ Bug D — uses download endpoint, not cert.pdf_url */}
                             <a
                               className="btn-icon"
                               title="Download"
-                              href={cert.pdf_url}
+                              href={`${import.meta.env.VITE_API_URL}/api/certificates/download/${cert.cert_id}`}
                               target="_blank"
                               rel="noreferrer"
                             >

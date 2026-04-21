@@ -31,8 +31,8 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { value: '10K+', label: 'Certificates Issued' },
-  { value: '500+', label: 'Organisations' },
+  { value: '100%', label: 'Tamper-Proof' },
+  { value: 'Free', label: 'No Cost' },
   { value: '99.9%', label: 'Uptime' },
   { value: '<2s', label: 'Verify Time' },
 ];

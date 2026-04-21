@@ -26,7 +26,7 @@ export default function Login() {
       localStorage.setItem('cv_user', JSON.stringify(res.data.user));
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import VideoBackground from './components/VideoBackground';
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
@@ -11,14 +11,9 @@ import './index.css';
 
 function App() {
   return (
-    <BrowserRouter>
-      {/* Animated background — always visible */}
+    <HashRouter>
       <VideoBackground />
-
-      {/* Floating navbar */}
       <Navbar />
-
-      {/* Page routes */}
       <div className="page-content">
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -30,7 +25,7 @@ function App() {
           <Route path="/certificate/:cert_id" element={<CertificatePreview />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
