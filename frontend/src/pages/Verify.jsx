@@ -7,7 +7,7 @@ import './Verify.css';
 export default function Verify() {
   const { cert_id } = useParams();
   const [certId, setCertId] = useState(cert_id || '');
-  const [status, setStatus] = useState(null); // null | 'loading' | 'valid' | 'invalid' | 'error'
+  const [status, setStatus] = useState(null);
   const [certificate, setCertificate] = useState(null);
   const [searched, setSearched] = useState(false);
 
@@ -40,10 +40,12 @@ export default function Verify() {
     handleVerify();
   };
 
+  const getDownloadUrl = (certId) =>
+    `${import.meta.env.VITE_API_BASE_URL}/certificates/download/${certId}`;
+
   return (
     <div className="verify__wrapper">
       <div className="verify__inner">
-        {/* Top label */}
         <div className="verify__badge">
           <Shield size={14} />
           Certificate Verification
@@ -54,7 +56,6 @@ export default function Verify() {
           Enter a Certificate ID or scan the QR code on the certificate to verify it instantly.
         </p>
 
-        {/* Search */}
         <form className="verify__form glass-card" onSubmit={handleSubmit}>
           <div className="verify__input-row">
             <div className="verify__input-wrapper">
@@ -63,18 +64,19 @@ export default function Verify() {
                 id="verify-cert-id"
                 type="text"
                 className="input-glass input-with-icon"
-                placeholder="e.g. CV-2024-0042"
+                placeholder="e.g. CERT-2025-AB12"
                 value={certId}
                 onChange={e => setCertId(e.target.value)}
               />
             </div>
             <button id="verify-submit" type="submit" className="btn btn-primary" disabled={status === 'loading'}>
-              {status === 'loading' ? <><Loader size={16} className="spin-icon" /> Checking...</> : <><Shield size={16} /> Verify</>}
+              {status === 'loading'
+                ? <><Loader size={16} className="spin-icon" /> Checking...</>
+                : <><Shield size={16} /> Verify</>}
             </button>
           </div>
         </form>
 
-        {/* Result */}
         {searched && status !== 'loading' && (
           <div className={`verify__result glass-card animate-slide-up ${status}`}>
             {status === 'valid' && certificate && (
@@ -94,7 +96,7 @@ export default function Verify() {
                     <User size={16} />
                     <div>
                       <div className="cd-label">Recipient</div>
-                      <div className="cd-value">{certificate.recipient_name}</div>
+                      <div className="cd-value">{certificate.name}</div>
                     </div>
                   </div>
                   <div className="cert__detail-item">
@@ -108,7 +110,10 @@ export default function Verify() {
                     <Calendar size={16} />
                     <div>
                       <div className="cd-label">Issued On</div>
-                      <div className="cd-value">{new Date(certificate.issued_date || certificate.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                      <div className="cd-value">
+                        {new Date(certificate.event_date || certificate.created_at)
+                          .toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </div>
                     </div>
                   </div>
                   <div className="cert__detail-item">
@@ -118,27 +123,31 @@ export default function Verify() {
                       <div className="cd-value"><code>{certificate.cert_id}</code></div>
                     </div>
                   </div>
-                  {certificate.issuer && (
+
+                  {certificate.issued_by && (
                     <div className="cert__detail-item">
                       <Shield size={16} />
                       <div>
                         <div className="cd-label">Issued By</div>
-                        <div className="cd-value">{certificate.issuer}</div>
+                        <div className="cd-value">{certificate.issued_by}</div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {certificate.pdf_url && (
-                  <div className="result__actions">
-                    <a href={certificate.pdf_url} target="_blank" rel="noreferrer" className="btn btn-primary">
-                      <Download size={15} /> Download Certificate
-                    </a>
-                    <Link to="/" className="btn btn-secondary">
-                      Back to Home
-                    </Link>
-                  </div>
-                )}
+                <div className="result__actions">
+                  <a
+                    href={getDownloadUrl(certificate.cert_id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary"
+                  >
+                    <Download size={15} /> Download Certificate
+                  </a>
+                  <Link to="/" className="btn btn-secondary">
+                    Back to Home
+                  </Link>
+                </div>
               </>
             )}
 
@@ -147,7 +156,9 @@ export default function Verify() {
                 <XCircle size={40} />
                 <div>
                   <div className="result__status-title">Certificate Not Found</div>
-                  <div className="result__status-sub">No certificate with ID <strong>{certId}</strong> exists in our records.</div>
+                  <div className="result__status-sub">
+                    No certificate with ID <strong>{certId}</strong> exists in our records.
+                  </div>
                 </div>
               </div>
             )}
@@ -157,14 +168,15 @@ export default function Verify() {
                 <AlertCircle size={40} />
                 <div>
                   <div className="result__status-title">Verification Error</div>
-                  <div className="result__status-sub">Could not connect to the verification server. Please try again.</div>
+                  <div className="result__status-sub">
+                    Could not connect to the verification server. Please try again.
+                  </div>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Trust indicators */}
         <div className="verify__trust">
           {[
             { icon: <Shield size={16} />, label: 'Firebase-backed' },
