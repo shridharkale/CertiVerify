@@ -25,6 +25,9 @@ export default function CertificatePreview() {
     load();
   }, [cert_id]);
 
+  const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/certificates/download/${cert_id}`;
+  const verifyUrl = `${window.location.origin}/CertiVerify/#/verify/${cert_id}`;
+
   if (loading) return (
     <div className="preview__loading">
       <Loader size={40} className="spin-icon" color="rgba(255,255,255,0.5)" />
@@ -43,7 +46,6 @@ export default function CertificatePreview() {
 
   return (
     <div className="preview__wrapper">
-      {/* Back */}
       <div className="preview__toolbar">
         <button className="btn btn-ghost btn-sm" onClick={() => navigate(-1)}>
           <ArrowLeft size={14} /> Back
@@ -52,26 +54,19 @@ export default function CertificatePreview() {
           <Link to={`/verify/${cert_id}`} className="btn btn-secondary btn-sm">
             <ExternalLink size={14} /> Public Link
           </Link>
-          <a 
-  href={`http://127.0.0.1:5000/api/certificates/download/${cert_id}`}
-  target="_blank" 
-  rel="noreferrer" 
-  className="btn btn-primary btn-sm"
->
-  <Download size={14} /> Download PDF
-</a>
+          <a href={downloadUrl} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm">
+            <Download size={14} /> Download PDF
+          </a>
         </div>
       </div>
 
-      {/* Certificate card */}
       <div className="preview__cert-card animate-slide-up">
-        {/* Header band */}
         <div className="cert-header-band">
           <div className="cert-logo">
             <Shield size={28} strokeWidth={2.5} />
           </div>
           <div>
-            <div className="cert-brand">CertVerify</div>
+            <div className="cert-brand">CertiVerify</div>
             <div className="cert-brand-sub">Certificate of Achievement</div>
           </div>
           <div className="cert-status-badge">
@@ -79,10 +74,9 @@ export default function CertificatePreview() {
           </div>
         </div>
 
-        {/* Main content */}
         <div className="cert-main">
           <div className="cert-label-top">This certifies that</div>
-          <div className="cert-recipient">{certificate.recipient_name}</div>
+          <div className="cert-recipient">{certificate.name}</div>
           <div className="cert-has-completed">has successfully completed</div>
           <div className="cert-course">{certificate.event_name}</div>
 
@@ -98,21 +92,23 @@ export default function CertificatePreview() {
               <div>
                 <div className="cmeta-label">Issued Date</div>
                 <div className="cmeta-val">
-                  {new Date(certificate.issued_date || certificate.created_at).toLocaleDateString('en-IN', {
+                  {new Date(certificate.event_date || certificate.created_at).toLocaleDateString('en-IN', {
                     day: 'numeric', month: 'long', year: 'numeric'
                   })}
                 </div>
               </div>
             </div>
-            {certificate.issuer && (
+
+            {certificate.organisation && (
               <div className="cert-meta-item">
                 <Award size={14} />
                 <div>
                   <div className="cmeta-label">Issued By</div>
-                  <div className="cmeta-val">{certificate.issuer}</div>
+                  <div className="cmeta-val">{certificate.organisation}</div>
                 </div>
               </div>
             )}
+
             <div className="cert-meta-item">
               <Hash size={14} />
               <div>
@@ -120,6 +116,7 @@ export default function CertificatePreview() {
                 <div className="cmeta-val"><code>{certificate.cert_id}</code></div>
               </div>
             </div>
+
             {certificate.email && (
               <div className="cert-meta-item">
                 <User size={14} />
@@ -131,7 +128,6 @@ export default function CertificatePreview() {
             )}
           </div>
 
-          {/* QR Section */}
           <div className="cert-qr-section">
             <div className="cert-qr-box">
               <div className="qr-art">
@@ -141,41 +137,75 @@ export default function CertificatePreview() {
               </div>
             </div>
             <div className="cert-qr-label">Scan to verify authenticity</div>
-            <div className="cert-qr-url">{window.location.origin}/verify/{cert_id}</div>
+            <div className="cert-qr-url">{verifyUrl}</div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="cert-footer">
           <div className="cert-sig-line" />
-          <div className="cert-sig-name">{certificate.issuer || 'CertVerify Platform'}</div>
+          <div className="cert-sig-name">{certificate.organisation || 'CertiVerify Platform'}</div>
           <div className="cert-sig-title">Authorised Signature</div>
         </div>
       </div>
 
-      {/* Actions panel */}
       <div className="preview__actions glass-card animate-fade-in">
         <h3>Share This Certificate</h3>
-        {/* ADD THIS */}
-  <a
-    href={`http://127.0.0.1:5000/api/certificates/download/${cert_id}`}
-    target="_blank"
-    rel="noreferrer"
-    className="btn btn-primary"
-    style={{display:'flex', alignItems:'center', gap:'6px', marginBottom:'12px'}}
-  >
-    <Download size={16} /> Download Certificate PDF
-  </a>
 
-  <div className="share-url"></div>
-        <div className="share-url">
-          <code>{window.location.origin}/verify/{cert_id}</code>
-          <button
-            className="btn btn-sm btn-secondary"
-            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/verify/${cert_id}`)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <a
+            href={downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}
           >
-            Copy Link
-          </button>
+            <Download size={16} /> Download Certificate PDF
+          </a>
+
+          {/* LinkedIn Share Button */}
+          <a
+            href={`https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(certificate.event_name)}&organizationName=${encodeURIComponent(certificate.organisation || 'CertiVerify')}&certUrl=${encodeURIComponent(verifyUrl)}&certId=${encodeURIComponent(certificate.cert_id)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              justifyContent: 'center',
+              background: '#0077b5',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              padding: '10px 20px',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s ease',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+              <rect x="2" y="9" width="4" height="12"/>
+              <circle cx="4" cy="4" r="2"/>
+            </svg>
+            Add to LinkedIn Profile
+          </a>
+
+          <div className="share-url">
+            <code style={{ fontSize: '11px' }}>{verifyUrl}</code>
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => {
+                navigator.clipboard.writeText(verifyUrl);
+              }}
+            >
+              Copy
+            </button>
+          </div>
         </div>
       </div>
     </div>

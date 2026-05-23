@@ -1,11 +1,76 @@
-.dashboard__wrapper {
+/* Dashboard Layout */
+.dashboard-layout {
+  display: flex;
   min-height: 100vh;
-  padding: 110px 24px 60px;
-  max-width: 1100px;
-  margin: 0 auto;
+  padding-top: 80px; /* Offset for top Navbar */
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.dashboard-sidebar {
+  width: 260px;
+  background: rgba(8, 11, 20, 0.7);
+  border-right: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  padding: 30px 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 30px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-primary);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 20px;
+}
+
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-primary);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.sidebar-item.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--primary-light);
+  border-left: 3px solid var(--primary);
+}
+
+.dashboard-main {
+  flex-grow: 1;
+  padding: 40px;
+  overflow-y: auto;
+  width: 100%;
 }
 
 .dashboard__header {
@@ -18,17 +83,17 @@
 .dashboard__greeting {
   font-size: 32px;
   font-weight: 800;
-  color: rgba(255,255,255,0.95);
+  color: rgba(255, 255, 255, 0.95);
   letter-spacing: -1px;
   margin-bottom: 4px;
 }
 
 .dashboard__sub {
   font-size: 15px;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
 }
 
-/* Stats */
+/* Stats Summary Cards */
 .dashboard__stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -55,7 +120,7 @@
 .ds-value {
   font-size: 28px;
   font-weight: 800;
-  color: rgba(255,255,255,0.95);
+  color: rgba(255, 255, 255, 0.95);
   letter-spacing: -0.5px;
   line-height: 1;
   margin-bottom: 2px;
@@ -63,46 +128,11 @@
 
 .ds-label {
   font-size: 12px;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
   font-weight: 500;
 }
 
-/* Tabs */
-.dashboard__tabs {
-  display: flex;
-  gap: 4px;
-  padding: 6px;
-  border-radius: var(--radius-full) !important;
-}
-
-.tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 22px;
-  border: none;
-  border-radius: var(--radius-full);
-  font-family: var(--font-primary);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  color: rgba(255,255,255,0.6);
-  transition: all var(--transition-base);
-}
-
-.tab-btn:hover {
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.9);
-}
-
-.tab-btn.active {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-  box-shadow: 0 4px 16px rgba(99,102,241,0.35);
-}
-
-/* Panel */
+/* Panels & Sections */
 .dashboard__panel {
   display: flex;
   flex-direction: column;
@@ -116,18 +146,18 @@
 .panel-title {
   font-size: 20px;
   font-weight: 700;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 16px;
 }
 
 .panel-sub {
   font-size: 13px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   margin-bottom: 16px;
 }
 
 .panel-sub code {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -141,34 +171,33 @@
   margin-top: 16px;
 }
 
-/* Event form */
+/* Event Details Form */
 .event-form {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
-/* Drop zone */
+/* CSV Drop Zone */
 .drop-zone {
-  border: 2px dashed rgba(255,255,255,0.2);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-lg);
   padding: 40px;
   cursor: pointer;
   transition: all var(--transition-base);
   text-align: center;
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   margin-bottom: 16px;
 }
 
-.drop-zone:hover,
-.drop-zone.drag-over {
+.drop-zone:hover {
   border-color: var(--primary);
-  background: rgba(99,102,241,0.08);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .drop-zone.has-file {
-  border-color: rgba(16,185,129,0.4);
-  background: rgba(16,185,129,0.05);
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.05);
 }
 
 .drop-zone__empty {
@@ -180,7 +209,7 @@
 
 .drop-zone__empty p {
   font-size: 15px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .dz-browse {
@@ -191,7 +220,7 @@
 
 .dz-hint {
   font-size: 12px;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .drop-zone__file {
@@ -203,20 +232,20 @@
 
 .dz-filename {
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 15px;
 }
 
 .dz-size {
   font-size: 12px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
 }
 
-/* Spinners */
+/* Spinner indicators */
 .spinner-dark {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(30,30,60,0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: var(--primary);
   border-radius: 50%;
   display: inline-block;
@@ -229,30 +258,30 @@
   gap: 12px;
   padding: 40px;
   justify-content: center;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .loading-spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid rgba(255,255,255,0.1);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin-slow 0.8s linear infinite;
 }
 
-/* Empty state */
+/* Empty Registry state */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
   padding: 60px 20px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 15px;
 }
 
-/* Table */
+/* CSV and registry Tables */
 .table-wrapper {
   overflow-x: auto;
 }
@@ -272,15 +301,15 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: rgba(255,255,255,0.45);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .preview-table td,
 .certs-table td {
   padding: 14px;
-  color: rgba(255,255,255,0.8);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   vertical-align: middle;
 }
 
@@ -290,22 +319,22 @@
 }
 
 .certs-table tr:hover td {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .cert-name {
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .cert-email {
   font-size: 12px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .cert-id {
   font-size: 12px;
-  background: rgba(99,102,241,0.15);
+  background: rgba(59, 130, 246, 0.15);
   color: var(--primary-light);
   padding: 3px 8px;
   border-radius: 6px;
@@ -324,7 +353,7 @@
 .preview-label {
   font-size: 12px;
   font-weight: 700;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   margin-bottom: 10px;
@@ -341,8 +370,47 @@
   margin-bottom: 0;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive Media Queries */
+@media (max-width: 900px) {
+  .dashboard-layout {
+    flex-direction: column;
+    padding-top: 60px;
+  }
+
+  .dashboard-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--glass-border);
+    padding: 15px 20px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-brand {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .sidebar-menu {
+    flex-direction: row;
+    overflow-x: auto;
+    width: 100%;
+    gap: 8px;
+    padding-bottom: 5px;
+  }
+
+  .sidebar-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .dashboard-main {
+    padding: 24px 16px;
+  }
+
   .dashboard__stats {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -350,8 +418,10 @@
   .event-form {
     grid-template-columns: 1fr;
   }
+}
 
-  .dashboard__wrapper {
-    padding: 100px 16px 40px;
+@media (max-width: 600px) {
+  .dashboard__stats {
+    grid-template-columns: 1fr;
   }
 }

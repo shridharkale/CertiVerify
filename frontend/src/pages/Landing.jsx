@@ -1,49 +1,78 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, ArrowRight, CheckCircle, Zap, Lock, Users, Star, ChevronDown } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle, Zap, Star, ChevronDown, Database, BarChart3, QrCode, FileSpreadsheet } from 'lucide-react';
+import api from '../utils/api';
 import './Landing.css';
 
 const FEATURES = [
   {
-    icon: <Zap size={24} />,
-    title: 'Instant Generation',
-    desc: 'Upload a CSV and generate hundreds of certificates in seconds with ReportLab.',
-    color: '#f59e0b',
+    icon: <Database size={24} />,
+    title: 'Smart Duplicate Detection',
+    desc: 'Automated two-level validation checking within batch and against past events in Firestore.',
+    color: '#3b82f6',
   },
   {
-    icon: <Shield size={24} />,
-    title: 'QR Verification',
-    desc: 'Every certificate carries a unique QR code linking to its public verification page.',
-    color: '#6366f1',
-  },
-  {
-    icon: <Lock size={24} />,
-    title: 'Tamper-Proof',
-    desc: 'Backed by Firebase Firestore — every issued certificate is stored & immutable.',
+    icon: <QrCode size={24} />,
+    title: 'Instant QR Verification',
+    desc: 'Sub-2-second certificate lookup with in-memory caching and real-time timeline.',
     color: '#10b981',
   },
   {
-    icon: <Users size={24} />,
-    title: 'Bulk Dispatch',
-    desc: 'Send verified PDFs directly to recipients the moment generation completes.',
+    icon: <FileSpreadsheet size={24} />,
+    title: 'Bulk Processing',
+    desc: 'Upload a CSV, run clean validation, and generate hundreds of PDFs using ReportLab.',
     color: '#06b6d4',
   },
-];
-
-const STATS = [
-  { value: '100%', label: 'Tamper-Proof' },
-  { value: 'Free', label: 'No Cost' },
-  { value: '99.9%', label: 'Uptime' },
-  { value: '<2s', label: 'Verify Time' },
+  {
+    icon: <BarChart3 size={24} />,
+    title: 'Analytics Dashboard',
+    desc: 'Visualize certificate distribution, week-over-week trends, and roles in real time.',
+    color: '#f59e0b',
+  },
 ];
 
 export default function Landing() {
   const [visible, setVisible] = useState(false);
+  const [totalCerts, setTotalCerts] = useState(0);
+  const [animatedCerts, setAnimatedCerts] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100);
+    
+    // Fetch live public stats
+    api.get('/certificates/public-stats')
+      .then(res => {
+        if (res.data && typeof res.data.total === 'number') {
+          setTotalCerts(res.data.total);
+        }
+      })
+      .catch(() => {});
+
     return () => clearTimeout(t);
   }, []);
+
+    // Animate counter for total certificates
+    useEffect(() => {
+      if (totalCerts <= 0) return; // Guard against zero to avoid division by zero
+      let start = 0;
+      const duration = 1500;
+      const stepTime = Math.abs(Math.floor(duration / totalCerts));
+      const timer = setInterval(() => {
+        start += 1;
+        setAnimatedCerts(start);
+        if (start >= totalCerts) {
+          clearInterval(timer);
+        }
+      }, Math.max(stepTime, 20));
+      return () => clearInterval(timer);
+    }, [totalCerts]);
+
+  const STATS = [
+    { value: '100%', label: 'Immutable Data' },
+    { value: `${animatedCerts}+`, label: 'Certs Issued' },
+    { value: 'Sub-2s', label: 'Verification' },
+    { value: '99.9%', label: 'API Uptime' },
+  ];
 
   return (
     <div className="landing__wrapper">
@@ -51,26 +80,28 @@ export default function Landing() {
       <section className={`landing__hero ${visible ? 'visible' : ''}`}>
         <div className="hero__badge animate-bounce-subtle">
           <Star size={13} fill="currentColor" />
-          Trusted Certificate Platform
+          Designed for Data & Analytical Teams
         </div>
 
         <h1 className="hero__title">
-          Issue & Verify Certificates
+          Certify Knowledge.
           <br />
-          <span className="gradient-text">with Confidence</span>
+          Verify Instantly.
+          <br />
+          <span className="gradient-text">Scale Infinitely.</span>
         </h1>
 
         <p className="hero__sub">
-          CertVerify lets organisers bulk-generate QR-embedded certificates from a CSV
-          and share a public link so anyone can verify authenticity in seconds.
+          Built with smart deduplication and high-performance real-time verification.
+          Upload CSV lists, generate tamper-proof QR certificates, and view interactive analytics.
         </p>
 
         <div className="hero__cta">
           <Link to="/register" className="btn btn-primary btn-lg">
-            Start for Free <ArrowRight size={18} />
+            Start Generating <ArrowRight size={18} />
           </Link>
           <Link to="/verify" className="btn btn-secondary btn-lg">
-            Verify a Certificate
+            Verify Certificate
           </Link>
         </div>
 
@@ -81,7 +112,7 @@ export default function Landing() {
               <div className="mockup__dot" style={{ background: '#ef4444' }} />
               <div className="mockup__dot" style={{ background: '#f59e0b' }} />
               <div className="mockup__dot" style={{ background: '#10b981' }} />
-              <span className="mockup__title">CertVerify Certificate</span>
+              <span className="mockup__title">CertiVerify Certificate</span>
             </div>
             <div className="mockup__body">
               <div className="mockup__seal">
@@ -92,7 +123,7 @@ export default function Landing() {
               <div className="mockup__event">React Bootcamp 2025</div>
               <div className="mockup__badges">
                 <span className="badge badge-success"><CheckCircle size={11} /> Verified</span>
-                <span className="badge badge-primary">ID: CV-2024-0042</span>
+                <span className="badge badge-primary">ID: CERT-2026-X8Y9</span>
               </div>
               <div className="mockup__qr">
                 <div className="qr-box">
@@ -110,16 +141,16 @@ export default function Landing() {
             <CheckCircle size={16} color="#10b981" /> Verified
           </div>
           <div className="orbit-item orbit-2 glass">
-            <Shield size={16} color="#6366f1" /> Authentic
+            <Shield size={16} color="#3b82f6" /> Authentic
           </div>
           <div className="orbit-item orbit-3 glass">
-            <Zap size={16} color="#f59e0b" /> Instant
+            <Zap size={16} color="#06b6d4" /> Fast lookup
           </div>
         </div>
 
         <a href="#features" className="scroll-hint">
           <ChevronDown size={20} />
-          Discover more
+          Discover Platform
         </a>
       </section>
 
@@ -136,9 +167,9 @@ export default function Landing() {
       {/* ── Features ── */}
       <section className="landing__features" id="features">
         <div className="section-header">
-          <h2 className="section-title">Everything you need</h2>
+          <h2 className="section-title">Analytical Performance</h2>
           <p className="section-sub">
-            A complete end-to-end platform — from CSV upload to public verification.
+            Fast, secure, and fully automated — optimized for developer portfolios and professional events.
           </p>
         </div>
         <div className="features__grid">
@@ -154,17 +185,65 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── How it works ── */}
-      <section className="landing__how">
+      {/* ── Code Editor Preview Section ── */}
+      <section className="landing__how" style={{ marginTop: '40px' }}>
         <div className="section-header">
-          <h2 className="section-title">How it works</h2>
-          <p className="section-sub">Three simple steps to get started.</p>
+          <h2 className="section-title">Standardized CSV Input</h2>
+          <p className="section-sub">Simple, clean data structures for seamless bulk parsing.</p>
+        </div>
+        <div className="glass-card" style={{
+          maxWidth: '600px',
+          width: '100%',
+          margin: '0 auto',
+          padding: '20px',
+          fontFamily: 'monospace',
+          fontSize: '14px',
+          textAlign: 'left',
+          lineHeight: '1.6',
+          borderLeft: '4px solid var(--primary)',
+          boxShadow: 'var(--glass-shadow)',
+          borderRadius: 'var(--radius-md)'
+        }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }} />
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }} />
+            <span style={{ marginLeft: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>participants.csv</span>
+          </div>
+          <div>
+            <span style={{ color: 'var(--primary-light)' }}>name</span>,
+            <span style={{ color: 'var(--accent)' }}>email</span>,
+            <span style={{ color: 'var(--secondary)' }}>role</span>
+          </div>
+          <div>
+            <span>Alice Vance</span>,
+            <span>alice@vance.io</span>,
+            <span style={{ color: 'rgba(255,255,255,0.6)' }}>Data Scientist</span>
+          </div>
+          <div>
+            <span>Bob Smith</span>,
+            <span>bob@smith.dev</span>,
+            <span style={{ color: 'rgba(255,255,255,0.6)' }}>Machine Learning Engineer</span>
+          </div>
+          <div>
+            <span>Charlie Doe</span>,
+            <span>charlie@doe.edu</span>,
+            <span style={{ color: 'rgba(255,255,255,0.6)' }}>Research Fellow</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="landing__how" style={{ marginTop: '80px' }}>
+        <div className="section-header">
+          <h2 className="section-title">Workflow Execution</h2>
+          <p className="section-sub">Standard operations pipeline from input to verified output.</p>
         </div>
         <div className="steps">
           {[
-            { n: '01', title: 'Upload CSV', desc: 'Upload a CSV with recipient names, emails and event info.' },
-            { n: '02', title: 'Generate PDFs', desc: 'Our engine creates QR-embedded certificate PDFs instantly.' },
-            { n: '03', title: 'Share & Verify', desc: 'Share the public link. Anyone can verify with one click.' },
+            { n: '01', title: 'Upload Data Source', desc: 'Upload a standardized CSV with names, emails, and roles.' },
+            { n: '02', title: 'Run Deduplication', desc: 'Our engine cleans validation conflicts and verifies in-memory.' },
+            { n: '03', title: 'Generate & Publish', desc: 'Immutable Firestore storage with automated QR-code access links.' },
           ].map((step, i) => (
             <div key={i} className="step-card glass-card">
               <div className="step-num gradient-text">{step.n}</div>
@@ -177,9 +256,9 @@ export default function Landing() {
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="landing__cta-banner glass-card">
-        <h2 className="cta-banner__title">Ready to go paperless?</h2>
-        <p className="cta-banner__sub">Join hundreds of organisers already using CertVerify.</p>
+      <section className="landing__cta-banner glass-card" style={{ marginTop: '80px' }}>
+        <h2 className="cta-banner__title">Ready to verify achievements?</h2>
+        <p className="cta-banner__sub">Join hundreds of researchers and organisers using CertiVerify.</p>
         <div className="hero__cta">
           <Link to="/register" className="btn btn-primary btn-lg">
             Create Free Account <ArrowRight size={18} />

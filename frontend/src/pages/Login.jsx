@@ -40,7 +40,7 @@ export default function Login() {
           <div className="logo-icon">
             <Shield size={22} strokeWidth={2.5} />
           </div>
-          <span className="auth__brand">CertVerify</span>
+          <span className="auth__brand">CertiVerify</span>
         </div>
 
         <h1 className="auth__title">Welcome back</h1>

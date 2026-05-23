@@ -7,31 +7,29 @@
 }
 
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.15);
-  --glass-bg-strong: rgba(255, 255, 255, 0.25);
-  --glass-border: rgba(255, 255, 255, 0.35);
-  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-  --glass-blur: blur(20px);
-
-  --primary: #6366f1;
-  --primary-light: #818cf8;
-  --primary-dark: #4f46e5;
-  --secondary: #06b6d4;
-  --accent: #f0abfc;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-
-  --text-primary: rgba(15, 23, 42, 0.95);
-  --text-secondary: rgba(30, 41, 59, 0.7);
-  --text-muted: rgba(51, 65, 85, 0.5);
-  --text-white: rgba(255, 255, 255, 0.95);
-  --text-white-muted: rgba(255, 255, 255, 0.7);
-
+  /* Updated Theme Variables */
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --primary-dark: #2563eb;
+  --secondary: #10b981;
+  --accent: #06b6d4;
+  --bg-card: #161b22;
+  --border: #30363d;
+  --accent-blue: #58a6ff;
+  --accent-green: #3fb950;
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.4);
   --font-primary: 'Outfit', sans-serif;
   --font-secondary: 'Inter', sans-serif;
-
   --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.3s ease;
+  --transition-slow: 0.5s ease;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
@@ -48,7 +46,7 @@ html {
 
 body {
   font-family: var(--font-primary);
-  background: #0f0f23;
+  background: #080b14;
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
@@ -62,33 +60,7 @@ body {
 }
 
 /* ── Video Background ── */
-.video-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-}
 
-.video-bg video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.45;
-}
-
-.video-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(99, 102, 241, 0.25) 0%,
-    rgba(6, 182, 212, 0.15) 40%,
-    rgba(240, 171, 252, 0.2) 80%,
-    rgba(99, 102, 241, 0.3) 100%
-  );
-  pointer-events: none;
-}
 
 .page-content {
   position: relative;

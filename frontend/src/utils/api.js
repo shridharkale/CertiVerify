@@ -1,9 +1,11 @@
 import axios from 'axios';
 
-// ─── Base URL ───────────────────────────────────────────────────────────
-// For GitHub Pages: set VITE_API_BASE_URL in frontend/.env
-// For local dev:    set VITE_API_BASE_URL=http://192.168.1.134:5000/api
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.134:5000/api';
+// ✅ No hardcoded IP fallback — forces proper .env setup
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE_URL) {
+  console.error('[api.js] VITE_API_BASE_URL is not set! Check your .env file.');
+}
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -13,7 +15,8 @@ const api = axios.create({
   },
 });
 
-// ─── Request interceptor — attach JWT token ──────────────────────────────
+// ─── Request interceptor — attach Firebase JWT token ─────────────────────
+// ✅ Single interceptor only (duplicate removed)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('cv_token');
@@ -25,7 +28,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─── Response interceptor — handle 401 ───────────────────────────────────
+// ─── Response interceptor — handle 401 auto-logout ───────────────────────
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -37,11 +40,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('cv_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
 
 export default api;

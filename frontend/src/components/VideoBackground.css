@@ -1,7 +1,7 @@
 .gradient-bg {
   position: fixed;
   inset: 0;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 40%, #24243e 70%, #0f0c29 100%);
+  background: #080b14;
   overflow: hidden;
 }
 
@@ -9,59 +9,59 @@
 .orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.55;
-  animation: orb-float 12s ease-in-out infinite;
+  filter: blur(100px);
+  opacity: 0.25;
+  animation: orb-float 15s ease-in-out infinite;
 }
 
 .orb-1 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.7), transparent);
-  top: -100px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.6), transparent);
+  top: -150px;
   left: -100px;
-  animation-duration: 14s;
+  animation-duration: 18s;
   animation-delay: 0s;
 }
 
 .orb-2 {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.6), transparent);
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.4), transparent);
   top: 20%;
-  right: -80px;
-  animation-duration: 11s;
+  right: -100px;
+  animation-duration: 14s;
   animation-delay: -3s;
 }
 
 .orb-3 {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(240, 171, 252, 0.5), transparent);
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent);
   bottom: 10%;
-  left: 20%;
-  animation-duration: 16s;
+  left: 10%;
+  animation-duration: 20s;
   animation-delay: -6s;
 }
 
 .orb-4 {
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.4), transparent);
-  bottom: -80px;
-  right: 20%;
-  animation-duration: 13s;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.3), transparent);
+  bottom: -100px;
+  right: 15%;
+  animation-duration: 16s;
   animation-delay: -2s;
 }
 
 .orb-5 {
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent);
-  top: 50%;
-  left: 50%;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent);
+  top: 40%;
+  left: 45%;
   transform: translate(-50%, -50%);
-  animation-duration: 18s;
+  animation-duration: 22s;
   animation-delay: -8s;
 }
 
@@ -70,13 +70,13 @@
     transform: translate(0, 0) scale(1);
   }
   25% {
-    transform: translate(40px, -40px) scale(1.05);
+    transform: translate(60px, -60px) scale(1.08);
   }
   50% {
-    transform: translate(-30px, 30px) scale(0.95);
+    transform: translate(-40px, 40px) scale(0.92);
   }
   75% {
-    transform: translate(20px, 20px) scale(1.02);
+    transform: translate(30px, 30px) scale(1.04);
   }
 }
 
@@ -92,7 +92,7 @@
   left: var(--x);
   width: var(--size);
   height: var(--size);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(59, 130, 246, 0.4);
   border-radius: 50%;
   bottom: -20px;
   animation: particle-rise var(--duration) var(--delay) ease-in infinite;
@@ -104,10 +104,10 @@
     opacity: 0;
   }
   10% {
-    opacity: 0.8;
+    opacity: 0.6;
   }
   90% {
-    opacity: 0.4;
+    opacity: 0.2;
   }
   100% {
     transform: translateY(-110vh) scale(0.3);
@@ -115,13 +115,24 @@
   }
 }
 
-/* Subtle mesh overlay */
+/* Subtle mesh overlay with data-science grid pattern */
 .vbg-overlay {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(6, 182, 212, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 80%, rgba(240, 171, 252, 0.06) 0%, transparent 60%);
+    radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.vbg-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(rgba(59, 130, 246, 0.1) 1.5px, transparent 0),
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px, 48px 48px, 48px 48px;
   pointer-events: none;
 }

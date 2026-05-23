@@ -33,7 +33,7 @@ export default function Navbar() {
             <Shield size={18} strokeWidth={2.5} />
           </div>
           <span className="logo-text">
-            Cert<span className="gradient-text">Verify</span>
+            Certi<span className="gradient-text">Verify</span>
           </span>
         </Link>
 

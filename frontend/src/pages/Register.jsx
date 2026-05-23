@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, User, Building, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../utils/api';
 import './Auth.css';
 
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', organisation: '' });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,11 +36,12 @@ export default function Register() {
         name: form.name,
         email: form.email,
         password: form.password,
+        organisation: form.organisation,
       });
       setSuccess('Account created! Redirecting to login...');
       setTimeout(() => navigate('/login'), 1800);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ export default function Register() {
           <div className="logo-icon">
             <Shield size={22} strokeWidth={2.5} />
           </div>
-          <span className="auth__brand">CertVerify</span>
+          <span className="auth__brand">CertiVerify</span>
         </div>
 
         <h1 className="auth__title">Create account</h1>
@@ -97,6 +98,23 @@ export default function Register() {
                 value={form.name}
                 onChange={handleChange}
                 required
+              />
+            </div>
+          </div>
+
+          {/* ✅ Organisation field added */}
+          <div className="form-group">
+            <label className="label">Organisation</label>
+            <div className="input-wrapper">
+              <Building size={16} className="input-icon" />
+              <input
+                id="reg-organisation"
+                name="organisation"
+                type="text"
+                className="input-glass input-with-icon"
+                placeholder="e.g. TechConf India"
+                value={form.organisation}
+                onChange={handleChange}
               />
             </div>
           </div>
