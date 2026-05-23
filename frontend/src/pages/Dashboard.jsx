@@ -246,25 +246,31 @@ export default function Dashboard() {
 
         <nav className="sidebar-menu">
           <button className={`sidebar-item ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>
-            <LayoutDashboard size={16} /> Overview
+            <LayoutDashboard size={16} />
+            <span className="sidebar-item-label">Overview</span>
           </button>
           <button className={`sidebar-item ${tab === 'generate' ? 'active' : ''}`} onClick={() => setTab('generate')}>
-            <UploadCloud size={16} /> Generate Certs
+            <UploadCloud size={16} />
+            <span className="sidebar-item-label">Generate</span>
           </button>
           <button className={`sidebar-item ${tab === 'certs' ? 'active' : ''}`} onClick={() => setTab('certs')}>
-            <FileText size={16} /> Certificates Registry
+            <FileText size={16} />
+            <span className="sidebar-item-label">Certificates</span>
           </button>
           <button className={`sidebar-item ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')}>
-            <BarChart2 size={16} /> Analytics Tab
+            <BarChart2 size={16} />
+            <span className="sidebar-item-label">Analytics</span>
           </button>
           <button className={`sidebar-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}>
-            <Settings size={16} /> settings
+            <Settings size={16} />
+            <span className="sidebar-item-label">Settings</span>
           </button>
         </nav>
 
         <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--glass-border)' }}>
           <button className="sidebar-item" onClick={handleLogout} style={{ color: 'rgba(239, 68, 68, 0.7)', width: '100%' }}>
-            <LogOut size={16} /> Logout
+            <LogOut size={16} />
+            <span className="sidebar-item-label">Logout</span>
           </button>
         </div>
       </aside>

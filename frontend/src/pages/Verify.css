@@ -4,6 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: 120px 24px 80px;
+  background: var(--bg-primary);
 }
 
 .verify__inner {
@@ -20,26 +21,26 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 16px;
+  padding: 8px 16px;
   border-radius: var(--radius-full);
-  background: rgba(16,185,129,0.12);
-  border: 1px solid rgba(16,185,129,0.3);
-  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--accent-green);
   font-size: 13px;
   font-weight: 600;
 }
 
 .verify__title {
-  font-size: clamp(28px, 5vw, 48px);
+  font-size: clamp(32px, 5vw, 48px);
   font-weight: 900;
-  color: rgba(255,255,255,0.95);
+  color: var(--text-primary);
   letter-spacing: -1.5px;
   line-height: 1.1;
 }
 
 .verify__sub {
   font-size: 16px;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-secondary);
   max-width: 460px;
   line-height: 1.65;
 }
@@ -48,6 +49,9 @@
 .verify__form {
   width: 100%;
   padding: 24px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
+  border-radius: 20px;
 }
 
 .verify__input-row {
@@ -71,6 +75,21 @@
 
 .verify__input-wrapper .input-glass {
   padding-left: 44px;
+  width: 100%;
+  padding: 12px 16px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all var(--transition-base);
+}
+
+.verify__input-wrapper .input-glass:focus {
+  outline: none;
+  background: #1c1430;
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
 /* Spin animation for loader */
@@ -78,10 +97,19 @@
   animation: spin-slow 0.8s linear infinite;
 }
 
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Result card */
 .verify__result {
   width: 100%;
   padding: 28px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
+  border-radius: var(--radius-lg);
   text-align: left;
 }
 
@@ -90,22 +118,33 @@
   align-items: flex-start;
   gap: 16px;
   padding: 16px;
+  border-left: 4px solid;
   border-radius: var(--radius-md);
+  background: #12091e;
 }
 
 .result__status.valid {
-  background: rgba(16,185,129,0.1);
-  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border-left-color: var(--accent-green);
+  color: var(--accent-green);
 }
 
 .result__status.invalid {
-  background: rgba(239,68,68,0.1);
-  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border-left-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.result__status.expired {
+  background: rgba(245, 158, 11, 0.12);
+  border-left-color: var(--accent-orange);
+  color: var(--accent-orange);
 }
 
 .result__status.error {
-  background: rgba(245,158,11,0.1);
-  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-left-color: var(--accent-orange);
+  color: var(--accent-orange);
 }
 
 .result__status-title {
@@ -125,14 +164,17 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin: 16px 0;
+  margin: 20px 0;
+  padding: 20px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
+  border-radius: 8px;
 }
 
 .cert__detail-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  color: rgba(255,255,255,0.5);
+  flex-direction: column;
+  gap: 4px;
 }
 
 .cd-label {
@@ -140,29 +182,34 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: rgba(255,255,255,0.4);
-  margin-bottom: 2px;
+  color: var(--text-muted);
 }
 
 .cd-value {
   font-size: 15px;
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: var(--text-primary);
 }
 
 .cd-value code {
-  background: rgba(99,102,241,0.15);
-  color: var(--primary-light);
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--accent-purple);
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 13px;
+  word-break: break-all;
 }
 
 .result__actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 16px;
+}
+
+.result__actions .btn {
+  flex: 1;
+  min-width: 120px;
 }
 
 /* Trust indicators */
@@ -171,24 +218,27 @@
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
+  margin-top: 20px;
 }
 
 .trust-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 10px 16px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
   border-radius: var(--radius-full);
 }
 
 .trust-icon {
-  color: var(--primary);
+  color: var(--accent-green);
 }
 
 .trust-label {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255,255,255,0.7);
+  color: var(--accent-green);
 }
 
 @media (max-width: 500px) {
@@ -206,31 +256,6 @@
   }
 }
 
-/* Scanner Line Effect */
-.scanner-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, transparent, var(--primary-light), transparent);
-  box-shadow: 0 0 10px var(--primary);
-  animation: scanning 2s linear infinite;
-  z-index: 5;
-}
-
-@keyframes scanning {
-  0% {
-    top: 0%;
-  }
-  50% {
-    top: 100%;
-  }
-  100% {
-    top: 0%;
-  }
-}
-
 /* Timeline Visual */
 .timeline-container {
   margin: 20px 0;
@@ -242,7 +267,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   margin-bottom: 15px;
 }
 
@@ -261,7 +286,7 @@
   top: 6px;
   bottom: 6px;
   width: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(124, 58, 237, 0.2);
 }
 
 .timeline-step {
@@ -279,23 +304,25 @@
   position: absolute;
   left: -20px;
   top: 4px;
-  border: 2px solid #080b14;
+  border: 2px solid var(--bg-primary);
 }
 
 .timeline-step.passed .step-dot {
-  background: #10b981;
+  background: var(--accent-green);
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
 }
 
 .timeline-step.warning .step-dot {
-  background: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  background: var(--accent-orange);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
 }
 
 .step-content {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .step-label {

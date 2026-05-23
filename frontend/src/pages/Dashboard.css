@@ -2,16 +2,15 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  padding-top: 80px; /* Offset for top Navbar */
-  background: transparent;
+  padding-top: 80px;
+  background: var(--bg-primary);
   color: var(--text-primary);
 }
 
 .dashboard-sidebar {
-  width: 260px;
-  background: rgba(8, 11, 20, 0.7);
-  border-right: 1px solid var(--glass-border);
-  backdrop-filter: var(--glass-blur);
+  width: 240px;
+  background: #12091e;
+  border-right: 1px solid #2d1b69;
   padding: 30px 20px;
   display: flex;
   flex-direction: column;
@@ -28,7 +27,7 @@
   font-size: 20px;
   font-weight: 800;
   color: var(--text-primary);
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--border-color);
   padding-bottom: 20px;
 }
 
@@ -45,25 +44,26 @@
   padding: 12px 16px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   font-family: var(--font-primary);
   font-size: 14px;
   font-weight: 600;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   cursor: pointer;
   text-align: left;
   transition: all var(--transition-fast);
 }
 
 .sidebar-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.95);
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--text-secondary);
 }
 
 .sidebar-item.active {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--primary-light);
-  border-left: 3px solid var(--primary);
+  background: rgba(124, 58, 237, 0.2);
+  color: var(--accent-purple);
+  border-left: 3px solid var(--accent-purple);
+  padding-left: 13px;
 }
 
 .dashboard-main {
@@ -71,6 +71,7 @@
   padding: 40px;
   overflow-y: auto;
   width: 100%;
+  background: var(--bg-primary);
 }
 
 .dashboard__header {
@@ -78,19 +79,20 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin-bottom: 32px;
 }
 
 .dashboard__greeting {
   font-size: 32px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.95);
+  font-weight: 900;
+  color: var(--text-primary);
   letter-spacing: -1px;
   margin-bottom: 4px;
 }
 
 .dashboard__sub {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-secondary);
 }
 
 /* Stats Summary Cards */
@@ -98,6 +100,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  margin-bottom: 32px;
 }
 
 .ds-card {
@@ -105,22 +108,33 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
+  border-radius: 12px;
+  transition: all var(--transition-base);
+}
+
+.ds-card:hover {
+  background: #1c1430;
+  border-color: #2d1b69;
 }
 
 .ds-icon {
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--accent-purple);
 }
 
 .ds-value {
   font-size: 28px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.95);
+  font-weight: 900;
+  color: var(--text-primary);
   letter-spacing: -0.5px;
   line-height: 1;
   margin-bottom: 2px;
@@ -128,7 +142,7 @@
 
 .ds-label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
   font-weight: 500;
 }
 
@@ -141,6 +155,9 @@
 
 .panel-section {
   padding: 28px;
+  background: #12091e;
+  border: 1px solid #2d1b69;
+  border-radius: 20px;
 }
 
 .panel-title {
@@ -180,24 +197,24 @@
 
 /* CSV Drop Zone */
 .drop-zone {
-  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
   padding: 40px;
   cursor: pointer;
   transition: all var(--transition-base);
   text-align: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: #12091e;
   margin-bottom: 16px;
 }
 
 .drop-zone:hover {
   border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.08);
+  background: #1c1430;
 }
 
 .drop-zone.has-file {
   border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.05);
+  background: #1c1430;
 }
 
 .drop-zone__empty {
@@ -380,7 +397,7 @@
   .dashboard-sidebar {
     width: 100%;
     border-right: none;
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: 1px solid #2d1b69;
     padding: 15px 20px;
     flex-direction: row;
     justify-content: space-between;
@@ -417,6 +434,66 @@
 
   .event-form {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout {
+    padding-top: 0;
+    padding-bottom: 100px;
+  }
+
+  .dashboard-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 70px;
+    padding: 8px 12px;
+    border-top: 1px solid #2d1b69;
+    border-bottom: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background: #12091e;
+    z-index: 1000;
+  }
+
+  .sidebar-brand {
+    display: none;
+  }
+
+  .sidebar-menu {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-item {
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 0;
+    gap: 4px;
+    text-align: center;
+  }
+
+  .sidebar-item svg {
+    margin: 0;
+  }
+
+  .sidebar-item-label {
+    display: none;
+  }
+
+  .dashboard-main {
+    padding: 24px 16px 120px;
   }
 }
 
