@@ -1,7 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, ArrowRight, CheckCircle, Star, Database, BarChart3, QrCode, FileSpreadsheet } from 'lucide-react';
+import anime from 'animejs';
 import api from '../utils/api';
+import { useReveal } from '../lib/motion/useReveal';
+import { useCountUp } from '../lib/motion/useCountUp';
+import { useTilt } from '../lib/motion/useTilt';
+import { useMagnetic } from '../lib/motion/useMagnetic';
+import { initParticles } from '../lib/motion/particles';
+import { EASE, DUR } from '../lib/motion/easings';
+import { MOTION_OK } from '../lib/motion/reducedMotion';
 import './Landing.css';
 
 const FEATURES = [
@@ -36,8 +44,50 @@ const FEATURES = [
 ];
 
 export default function Landing() {
-  const [totalCerts, setTotalCerts] = useState(0);
-  const [animatedCerts, setAnimatedCerts] = useState(0);
+  const [stats, setStats] = useState({ total: 0, today: 0, orgs: 0 });
+
+  // Canvas particle background
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (!canvasRef.current || !MOTION_OK) return;
+    const cleanup = initParticles(canvasRef.current, {
+      count: 45, color: '#7C3AED', linkColor: 'rgba(124,58,237,0.12)'
+    });
+    return cleanup;
+  }, []);
+
+  // Hero text stagger entrance
+  const headlineRef = useRef(null);
+  useEffect(() => {
+    if (!headlineRef.current || !MOTION_OK) return;
+    const words = headlineRef.current.querySelectorAll('.word');
+    anime({
+      targets: words,
+      translateY: [60, 0],
+      opacity: [0, 1],
+      duration: 1000,
+      easing: EASE.outExpo,
+      delay: anime.stagger(140, { start: 200 }),
+    });
+  }, []);
+
+  // Scroll-reveal sections
+  const featuresRef = useReveal({ staggerDelay: 140 });
+  const stepsRef = useReveal({ staggerDelay: 180 });
+  const csvRef = useReveal({ staggerDelay: 100 });
+
+  // Stat counters
+  const statCertsRef = useCountUp({ to: stats.total, suffix: '+' });
+  const stat2Ref = useCountUp({ to: 500, suffix: 'ms' });
+  const stat3Ref = useCountUp({ to: 100, suffix: '%' });
+
+  // Card tilt
+  const heroCardRef = useTilt({ max: 8 });
+
+  // Magnetic CTAs
+  const ctaBtn1Ref = useMagnetic();
+  const ctaBtn2Ref = useMagnetic();
+  const ctaBannerRef = useMagnetic();
 
   useEffect(() => {
     document.title = 'CertiVerify — Issue & Verify Certificates';
@@ -47,31 +97,16 @@ export default function Landing() {
     api.get('/certificates/public-stats')
       .then(res => {
         if (res.data && typeof res.data.total === 'number') {
-          setTotalCerts(res.data.total);
+          setStats({ total: res.data.total, today: 0, orgs: 0 });
         }
       })
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (totalCerts <= 0) return;
-    let start = 0;
-    const duration = 1500;
-    const stepTime = Math.abs(Math.floor(duration / totalCerts));
-    const timer = setInterval(() => {
-      start += 1;
-      setAnimatedCerts(start);
-      if (start >= totalCerts) {
-        clearInterval(timer);
-      }
-    }, Math.max(stepTime, 20));
-    return () => clearInterval(timer);
-  }, [totalCerts]);
-
   const STATS = [
-    { value: animatedCerts > 0 ? `${animatedCerts}+` : '—', label: 'Certificates Issued' },
-    { value: '500ms', label: 'Verify Time' },
-    { value: '100%', label: 'Tamper Proof' },
+    { ref: statCertsRef, label: 'Certificates Issued' },
+    { ref: stat2Ref, label: 'Verify Time' },
+    { ref: stat3Ref, label: 'Tamper Proof' },
     { value: 'Bulk', label: 'CSV Upload' },
   ];
 
@@ -86,15 +121,29 @@ export default function Landing() {
       <div className="landing__grid" />
 
       <section className="landing__hero">
+        {/* Canvas particle background */}
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            opacity: 0.5, pointerEvents: 'none'
+          }}
+        />
         <div className="hero__content">
           <div className="hero__badge">
             <Star size={13} fill="currentColor" />
             Trusted by researchers and organizers
           </div>
 
-          <h1 className="hero__title">
-            Issue & Verify <br />
-            <span className="accent-coral">Instantly</span>
+          <h1 className="hero__title" ref={headlineRef}>
+            {['Issue', '&', 'Verify', 'Instantly'].map(w => (
+              <span key={w} className="word" style={{ display: 'inline-block', opacity: 0, marginRight: '0.25em' }}>
+                {w}{' '}
+              </span>
+            ))}
+            <br />
+            <span className="accent-coral">Certificates</span>
           </h1>
 
           <p className="hero__sub">
@@ -102,17 +151,17 @@ export default function Landing() {
           </p>
 
           <div className="hero__cta">
-            <Link to="/register" className="btn btn-primary btn-lg">
+            <Link to="/register" ref={ctaBtn1Ref} className="btn btn-primary btn-lg">
               Start Free <ArrowRight size={18} />
             </Link>
-            <Link to="/verify" className="btn btn-secondary btn-lg">
+            <Link to="/verify" ref={ctaBtn2Ref} className="btn btn-secondary btn-lg">
               Verify Certificate
             </Link>
           </div>
         </div>
 
         <div className="hero__mockup">
-          <div className="mockup__card">
+          <div className="mockup__card" ref={heroCardRef}>
             <div className="mockup__header">
               <div className="mockup__dot red" />
               <div className="mockup__dot yellow" />
@@ -158,7 +207,9 @@ export default function Landing() {
         <div className="stats__grid">
           {STATS.map((s, i) => (
             <div key={i} className="stat-card">
-              <div className="stat-value">{s.value}</div>
+              <div className="stat-value">
+                {s.ref ? <span ref={s.ref}>0</span> : s.value}
+              </div>
               <div className="stat-label">{s.label}</div>
             </div>
           ))}
@@ -172,7 +223,7 @@ export default function Landing() {
             Everything you need to issue, manage, and verify professional certificates.
           </p>
         </div>
-        <div className="features__grid">
+        <div className="features__grid" ref={featuresRef}>
           {FEATURES.map((f, i) => (
             <div key={i} className="feature-card" style={{ borderLeftColor: f.color }}>
               <div className="feature-icon" style={{ color: f.color }}>
@@ -190,7 +241,7 @@ export default function Landing() {
           <h2 className="section-title">Simple CSV Format</h2>
           <p className="section-sub">Just three columns needed</p>
         </div>
-        <div className="csv-code-block">
+        <div className="csv-code-block" ref={csvRef}>
           <div className="csv-header">
             <span className="dot red" />
             <span className="dot yellow" />
@@ -212,7 +263,7 @@ Rahul Kumar,rahul@example.com,Participant
           <p className="section-sub">From CSV to verified certificates in minutes</p>
         </div>
 
-        <div className="steps-container">
+        <div className="steps-container" ref={stepsRef}>
           {[
             { num: '1', title: 'Upload CSV', desc: 'Names, emails, roles' },
             { num: '2', title: 'Generate Certs', desc: 'Automated QR codes' },
@@ -231,7 +282,7 @@ Rahul Kumar,rahul@example.com,Participant
       <section className="landing__cta-banner">
         <h2 className="cta__title">Ready to issue your first certificate?</h2>
         <p className="cta__sub">Join hundreds of organizations using CertiVerify</p>
-        <Link to="/register" className="btn btn-primary btn-lg">
+        <Link to="/register" ref={ctaBannerRef} className="btn btn-primary btn-lg">
           Get Started Free <ArrowRight size={18} />
         </Link>
       </section>

@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Shield, CheckCircle, XCircle, AlertCircle, Download, Search, Calendar, Award, User, Hash, Loader, Clock, Building } from 'lucide-react';
+import anime from 'animejs';
 import api from '../utils/api';
+import { EASE } from '../lib/motion/easings';
+import { MOTION_OK } from '../lib/motion/reducedMotion';
 import './Verify.css';
 
 export default function Verify() {
@@ -20,6 +23,9 @@ export default function Verify() {
       return [];
     }
   });
+
+  // Ref for cert ID scramble animation
+  const certIdRef = useRef(null);
 
   useEffect(() => {
     document.title = 'Verify Certificate — CertiVerify';
@@ -70,16 +76,129 @@ export default function Verify() {
       }
       if (res.data.status === 'EXPIRED') {
         setStatus('expired');
+        handleVerifyResult({ valid: false, status: 'expired' }, res.data.certificate);
       } else {
         setStatus('valid');
+        handleVerifyResult({ valid: true, status: 'valid' }, res.data.certificate);
       }
     } catch (err) {
       if (err.response?.status === 404) {
         setStatus('invalid');
+        handleVerifyResult({ valid: false, status: 'invalid' });
       } else {
         setStatus('error');
+        handleVerifyResult({ valid: false, status: 'error' });
       }
     }
+  };
+
+  const handleVerifyResult = (result, certificate) => {
+    if (result.valid && result.status === 'valid' && certificate?.cert_id) {
+      // Scramble the cert ID into view
+      if (certIdRef.current && MOTION_OK) {
+        // Initialize the scramble animation
+        const finalText = certificate.cert_id;
+        const chars = finalText.split('');
+        let frame = 0;
+        const duration = 1200;
+        const totalFrames = Math.floor(duration / 16);
+        const settleStart = Math.floor(totalFrames * 0.4);
+        const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
+
+        const tick = () => {
+          const settled = Math.max(0, frame - settleStart);
+          const settledCount = Math.floor((settled / (totalFrames - settleStart)) * chars.length);
+
+          certIdRef.current.textContent = chars.map((c, i) => {
+            if (i < settledCount || c === '-' || c === ' ') return c;
+            return ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+          }).join('');
+
+          frame++;
+          if (frame < totalFrames) setTimeout(tick, 16);
+          else certIdRef.current.textContent = finalText;
+        };
+
+        setTimeout(tick, 400);
+      }
+
+      // Success card entrance
+      setTimeout(() => {
+        anime({
+          targets: '.verify__result',
+          scale: [0.92, 1],
+          opacity: [0, 1],
+          duration: 500,
+          easing: EASE.outExpo,
+        });
+      }, 100);
+
+      // SVG checkmark draw-in (if available)
+      anime({
+        targets: '.check-path',
+        strokeDashoffset: [100, 0],
+        duration: 600,
+        easing: EASE.outExpo,
+        delay: 200,
+      });
+
+      // Mini confetti burst
+      spawnConfetti();
+    } else {
+      // Shake on invalid
+      anime({
+        targets: '.verify__result',
+        translateX: [0, -10, 10, -7, 7, -4, 4, 0],
+        duration: 500,
+        easing: EASE.outQuad,
+      });
+      anime({
+        targets: '.verify__result',
+        borderColor: ['var(--border)', '#EF4444'],
+        duration: 300,
+      });
+    }
+  };
+
+  // Confetti helper (canvas-based, 60 particles)
+  const spawnConfetti = () => {
+    if (!MOTION_OK) return;
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:999';
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = Array.from({ length: 60 }, () => ({
+      x: canvas.width / 2, y: canvas.height / 2,
+      vx: (Math.random() - 0.5) * 12,
+      vy: (Math.random() - 0.8) * 14,
+      r: 4 + Math.random() * 4,
+      color: ['#7C3AED','#2563EB','#10B981','#E8B84B'][Math.floor(Math.random()*4)],
+      life: 1,
+    }));
+
+    let rafId;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (const p of particles) {
+        p.life -= 0.018;
+        if (p.life <= 0) continue;
+        alive = true;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.3;
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if (alive) rafId = requestAnimationFrame(draw);
+      else { cancelAnimationFrame(rafId); canvas.remove(); }
+    };
+    draw();
   };
 
   const handleSubmit = (e) => {
@@ -310,7 +429,7 @@ export default function Verify() {
                     <Hash size={16} />
                     <div>
                       <div className="cd-label">Certificate ID</div>
-                      <div className="cd-value"><code style={{ fontFamily: 'monospace' }}>{certificate.cert_id}</code></div>
+                      <div className="cd-value"><code ref={certIdRef} style={{ fontFamily: 'monospace' }}>{certificate.cert_id}</code></div>
                     </div>
                   </div>
 

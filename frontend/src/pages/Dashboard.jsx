@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import anime from 'animejs';
 import {
   UploadCloud, FileText, Play, Download, Trash2,
   CheckCircle, AlertCircle, BarChart2,
@@ -12,6 +13,8 @@ import {
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import api from '../utils/api';
+import { EASE } from '../lib/motion/easings';
+import { MOTION_OK } from '../lib/motion/reducedMotion';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -99,6 +102,20 @@ export default function Dashboard() {
       setCertLoading(false);
     }
   };
+
+  // Animate table rows after data loads
+  useEffect(() => {
+    if (!certLoading && certificates.length > 0) {
+      anime({
+        targets: '.table-row',
+        translateY: [20, 0],
+        opacity: [0, 1],
+        duration: 500,
+        easing: EASE.outExpo,
+        delay: anime.stagger(70),
+      });
+    }
+  }, [certLoading, certificates]);
 
   const handleLogout = () => {
     localStorage.removeItem('cv_token');
@@ -577,7 +594,7 @@ export default function Dashboard() {
                       {filteredCerts.map((cert, i) => {
                         const statusObj = getExpiryLabel(cert.expiry_date);
                         return (
-                          <tr key={i}>
+                          <tr key={i} className="table-row">
                             <td>
                               <div className="cert-name">{cert.name}</div>
                               <div className="cert-email" style={{ fontSize: '11px' }}>{cert.email}</div>

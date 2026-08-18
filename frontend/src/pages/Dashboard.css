@@ -515,6 +515,27 @@
   .dashboard__stats {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* Skeleton Shimmer Loading Animation */
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.skeleton-card {
+  height: 100px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #140E22 25%, #1e1535 50%, #140E22 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+  }
 
   .event-form {
     grid-template-columns: 1fr;
