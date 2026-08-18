@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   UploadCloud, FileText, Play, Download, Trash2,
   CheckCircle, AlertCircle, BarChart2,
-  Users, Award, Calendar, RefreshCw, Eye, Building,
-  LogOut, Settings, LayoutDashboard, Database, HelpCircle,
-  FileSpreadsheet, Search, Sparkles, ExternalLink
+  Users, Award, Calendar, RefreshCw, Eye,
+  LogOut, Settings, LayoutDashboard, Database,
+  FileSpreadsheet, Search, Sparkles, Copy
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import api from '../utils/api';
@@ -19,32 +19,35 @@ export default function Dashboard() {
   const user = JSON.parse(localStorage.getItem('cv_user') || '{}');
   const fileRef = useRef(null);
 
-  // Tabs: overview, generate, certs, analytics, settings
   const [tab, setTab] = useState('overview');
-  
-  // CSV generation logic state
+
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreview, setCsvPreview] = useState([]);
-  const [eventDetails, setEventDetails] = useState({ 
-    event_name: '', 
-    event_date: '', 
+  const [eventDetails, setEventDetails] = useState({
+    event_name: '',
+    event_date: '',
     organisation: '',
-    expiry_date: '' 
+    expiry_date: ''
   });
   const [dragOver, setDragOver] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [uploadMsg, setUploadMsg] = useState('');
   const [uploadId, setUploadId] = useState(null);
-  
+
   const [genStatus, setGenStatus] = useState(null);
   const [genMsg, setGenMsg] = useState('');
+  const [genProgress, setGenProgress] = useState(0);
   const [certificates, setCertificates] = useState([]);
   const [certLoading, setCertLoading] = useState(false);
-  
-  // Stats state
+
   const [stats, setStats] = useState({ total: 0, events: 0, recent: 0, expired: 0 });
   const [uploadedParticipants, setUploadedParticipants] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
+
+  useEffect(() => {
+    document.title = 'Dashboard — CertiVerify';
+  }, []);
 
   useEffect(() => {
     if (!localStorage.getItem('cv_token')) {
@@ -54,17 +57,33 @@ export default function Dashboard() {
     fetchCertificates();
   }, []);
 
+  useEffect(() => {
+    if (genStatus === 'loading') {
+      setGenProgress(0);
+      const interval = setInterval(() => {
+        setGenProgress(p => Math.min(p + 10, 90));
+      }, 300);
+      return () => clearInterval(interval);
+    }
+    if (genStatus === 'success') {
+      setGenProgress(100);
+    }
+    if (genStatus === 'error') {
+      setGenProgress(0);
+    }
+  }, [genStatus]);
+
   const fetchCertificates = async () => {
     setCertLoading(true);
     try {
       const res = await api.get('/certificates/list');
       const list = res.data.certificates || [];
       setCertificates(list);
-      
+
       const events = new Set(list.map(c => c.event_name)).size;
       const nowSeconds = Math.floor(Date.now() / 1000);
       const expiredCount = list.filter(c => c.expiry_date && nowSeconds > c.expiry_date).length;
-      
+
       setStats({
         total: list.length,
         events,
@@ -160,7 +179,6 @@ export default function Dashboard() {
     }
   };
 
-  // Export table to CSV (client-side only)
   const exportToCSV = () => {
     if (certificates.length === 0) return;
     const headers = ['Cert ID', 'Recipient Name', 'Recipient Email', 'Role', 'Event Name', 'Event Date', 'Organisation', 'Issued At', 'Expiry Date'];
@@ -175,10 +193,10 @@ export default function Dashboard() {
       c.created_at,
       c.expiry_date ? new Date(c.expiry_date * 1000).toLocaleDateString() : 'Never'
     ]);
-    
-    const csvContent = "data:text/csv;charset=utf-8," 
+
+    const csvContent = "data:text/csv;charset=utf-8,"
       + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -188,7 +206,14 @@ export default function Dashboard() {
     document.body.removeChild(link);
   };
 
-  // Recharts data processing
+  const copyVerifyLink = (certId) => {
+    const url = `https://shridharkale.github.io/CertiVerify/#/verify/${certId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(certId);
+      setTimeout(() => setCopiedId(null), 1500);
+    }).catch(() => {});
+  };
+
   const getEventData = () => {
     const map = {};
     certificates.forEach(c => {
@@ -208,7 +233,6 @@ export default function Dashboard() {
 
   const getTimelineData = () => {
     const map = {};
-    // Group by month/year
     certificates.forEach(c => {
       const d = new Date(c.created_at || Date.now());
       const key = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
@@ -237,7 +261,6 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-layout">
-      {/* SIDEBAR NAVIGATION */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">
           <Award size={22} color="var(--primary)" />
@@ -275,9 +298,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* MAIN CONTAINER */}
       <main className="dashboard-main">
-        {/* Header section */}
         <div className="dashboard__header" style={{ marginBottom: '24px' }}>
           <div>
             <h1 className="dashboard__greeting" style={{ fontSize: '28px' }}>
@@ -290,10 +311,8 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* OVERVIEW PANEL */}
         {tab === 'overview' && (
           <div className="dashboard__panel animate-fade-in">
-            {/* Stats Summary Cards */}
             <div className="dashboard__stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
               <div className="ds-card glass-card" style={{ borderLeft: '4px solid var(--primary)' }}>
                 <div className="ds-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary)' }}>
@@ -333,7 +352,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Quick action section */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '10px' }}>
               <div className="panel-section glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: '700' }}>Platform Health Status</h3>
@@ -364,7 +382,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* GENERATE TAB */}
         {tab === 'generate' && (
           <div className="dashboard__panel animate-fade-in">
             <div className="panel-section glass-card">
@@ -490,6 +507,13 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {genStatus === 'loading' && (
+                <div className="progress-bar-wrapper">
+                  <div className="progress-bar" style={{ width: `${genProgress}%` }} />
+                  <p>Generating certificates... {genProgress}%</p>
+                </div>
+              )}
+
               {genStatus === 'error' && (
                 <div className="alert alert-error"><AlertCircle size={16} /> {genMsg}</div>
               )}
@@ -500,11 +524,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* CERTIFICATES REGISTRY TAB */}
         {tab === 'certs' && (
           <div className="dashboard__panel animate-fade-in">
             <div className="panel-section glass-card">
-              <div className="certs-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div className="certs-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <h2 className="panel-title" style={{ margin: 0 }}>Certificate Records Database</h2>
                   <span className="badge badge-primary">{filteredCerts.length} / {certificates.length} records</span>
@@ -514,14 +537,13 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* Search Bar */}
               <div style={{ marginBottom: '20px' }}>
-                <div className="verify__input-wrapper" style={{ margin: 0 }}>
+                <div className="verify__input-wrapper" style={{ margin: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <Search size={16} className="input-icon" />
                   <input
                     type="text"
                     className="input-glass input-with-icon"
-                    placeholder="Query by ID, recipient name, event name or email..."
+                    placeholder="Search by name, email, event or cert ID..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                   />
@@ -583,6 +605,15 @@ export default function Dashboard() {
                                 >
                                   <Eye size={14} />
                                 </button>
+                                <button
+                                  className="btn-icon"
+                                  title={copiedId === cert.cert_id ? 'Copied!' : 'Copy Verify Link'}
+                                  onClick={() => copyVerifyLink(cert.cert_id)}
+                                >
+                                  {copiedId === cert.cert_id
+                                    ? <CheckCircle size={14} color="#10b981" />
+                                    : <Copy size={14} />}
+                                </button>
                                 <a
                                   className="btn-icon"
                                   title="Download Original PDF"
@@ -605,13 +636,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ANALYTICS TAB */}
         {tab === 'analytics' && (
           <div className="dashboard__panel animate-fade-in">
-            {/* Visualisations Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-              
-              {/* Event Distribution Bar Chart */}
               <div className="panel-section glass-card" style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Certificates Issued per Event</h3>
                 {certificates.length === 0 ? (
@@ -631,7 +658,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Roles Distribution Pie Chart */}
               <div className="panel-section glass-card" style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Recipient Role Breakdown</h3>
                 {certificates.length === 0 ? (
@@ -658,7 +684,7 @@ export default function Dashboard() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    {/* Legend */}
+
                     <div style={{ width: '40%', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                       {getRoleData().map((entry, index) => (
                         <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -673,7 +699,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Weekly Timeline Line Chart */}
               <div className="panel-section glass-card" style={{ height: '350px', display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Certificates Registry Trend Over Time</h3>
                 {certificates.length === 0 ? (
@@ -694,7 +719,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Summary statistics */}
             <div className="panel-section glass-card" style={{ marginTop: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '14px' }}>Summary Analytical Insights</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -721,12 +745,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* SETTINGS PANEL */}
         {tab === 'settings' && (
           <div className="dashboard__panel animate-fade-in">
             <div className="panel-section glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <h2 className="panel-title" style={{ margin: 0 }}>Account Settings & Profile</h2>
-              
+
               <div className="event-form" style={{ gridTemplateColumns: '1fr', gap: '16px', maxWidth: '500px' }}>
                 <div className="form-group">
                   <label className="label">Registered Email</label>

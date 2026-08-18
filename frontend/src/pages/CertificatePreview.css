@@ -30,7 +30,6 @@
   animation: spin-slow 1s linear infinite;
 }
 
-/* Toolbar */
 .preview__toolbar {
   display: flex;
   align-items: center;
@@ -43,7 +42,6 @@
   gap: 10px;
 }
 
-/* The Certificate Visual */
 .preview__cert-card {
   background: rgba(255, 255, 255, 0.95);
   border-radius: var(--radius-xl);
@@ -98,7 +96,6 @@
   font-weight: 600;
 }
 
-/* Main cert content */
 .cert-main {
   padding: 48px 40px;
   text-align: center;
@@ -161,7 +158,6 @@
   background: linear-gradient(90deg, #c7d2fe, transparent);
 }
 
-/* Cert meta */
 .cert-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -204,7 +200,6 @@
   border-radius: 6px;
 }
 
-/* QR section */
 .cert-qr-section {
   display: flex;
   flex-direction: column;
@@ -245,7 +240,6 @@
   max-width: 300px;
 }
 
-/* Footer */
 .cert-footer {
   padding: 24px 40px;
   background: #f8fafc;
@@ -273,7 +267,6 @@
   letter-spacing: 0.8px;
 }
 
-/* Actions panel */
 .preview__actions {
   padding: 22px 24px;
 }

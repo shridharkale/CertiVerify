@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, ArrowRight, CheckCircle, Zap, Star, ChevronDown, Database, BarChart3, QrCode, FileSpreadsheet, Download, Share2, Clock, Lock, Sparkles } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle, Star, Database, BarChart3, QrCode, FileSpreadsheet } from 'lucide-react';
 import api from '../utils/api';
 import './Landing.css';
 
@@ -36,14 +36,14 @@ const FEATURES = [
 ];
 
 export default function Landing() {
-  const [visible, setVisible] = useState(false);
   const [totalCerts, setTotalCerts] = useState(0);
   const [animatedCerts, setAnimatedCerts] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 100);
-    
-    // Fetch live public stats
+    document.title = 'CertiVerify — Issue & Verify Certificates';
+  }, []);
+
+  useEffect(() => {
     api.get('/certificates/public-stats')
       .then(res => {
         if (res.data && typeof res.data.total === 'number') {
@@ -51,11 +51,8 @@ export default function Landing() {
         }
       })
       .catch(() => {});
-
-    return () => clearTimeout(t);
   }, []);
 
-  // Animate counter for total certificates
   useEffect(() => {
     if (totalCerts <= 0) return;
     let start = 0;
@@ -72,26 +69,23 @@ export default function Landing() {
   }, [totalCerts]);
 
   const STATS = [
+    { value: animatedCerts > 0 ? `${animatedCerts}+` : '—', label: 'Certificates Issued' },
     { value: '500ms', label: 'Verify Time' },
     { value: '100%', label: 'Tamper Proof' },
     { value: 'Bulk', label: 'CSV Upload' },
-    { value: 'Free', label: 'No Cost' },
   ];
 
   return (
     <div className="landing__wrapper">
-      {/* ── Background Orbs ── */}
       <div className="landing__orbs">
         <div className="orb orb-1" />
         <div className="orb orb-2" />
         <div className="orb orb-3" />
       </div>
 
-      {/* ── Dot Grid Overlay ── */}
       <div className="landing__grid" />
 
-      {/* ── Hero ── */}
-      <section className={`landing__hero ${visible ? 'visible' : ''}`}>
+      <section className="landing__hero">
         <div className="hero__content">
           <div className="hero__badge">
             <Star size={13} fill="currentColor" />
@@ -117,7 +111,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Floating Certificate Card */}
         <div className="hero__mockup">
           <div className="mockup__card">
             <div className="mockup__header">
@@ -126,16 +119,16 @@ export default function Landing() {
               <div className="mockup__dot green" />
               <span className="mockup__title">Certificate</span>
             </div>
-            
+
             <div className="mockup__body">
               <div className="mockup__badge-corner">
                 <CheckCircle size={16} className="badge-icon" />
               </div>
-              
+
               <div className="mockup__seal">
                 <Shield size={32} />
               </div>
-              
+
               <div className="mockup__text">
                 <div className="mockup__label">Certificate of Achievement</div>
                 <div className="mockup__name">Arjun Sharma</div>
@@ -161,7 +154,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Stats Section ── */}
       <section className="landing__stats">
         <div className="stats__grid">
           {STATS.map((s, i) => (
@@ -173,7 +165,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Features Section ── */}
       <section className="landing__features" id="features">
         <div className="section-header">
           <h2 className="section-title">Powerful Features</h2>
@@ -194,13 +185,33 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── How It Works ── */}
+      <section className="landing__csv-preview">
+        <div className="section-header">
+          <h2 className="section-title">Simple CSV Format</h2>
+          <p className="section-sub">Just three columns needed</p>
+        </div>
+        <div className="csv-code-block">
+          <div className="csv-header">
+            <span className="dot red" />
+            <span className="dot yellow" />
+            <span className="dot green" />
+            <span>sample.csv</span>
+          </div>
+          <pre className="csv-code">
+<span className="csv-col-header">name</span>,<span className="csv-col-header">email</span>,<span className="csv-col-header">role</span>{'\n'}
+Arjun Sharma,arjun@example.com,Speaker{'\n'}
+Priya Patel,priya@example.com,Attendee{'\n'}
+Rahul Kumar,rahul@example.com,Participant
+          </pre>
+        </div>
+      </section>
+
       <section className="landing__how">
         <div className="section-header">
           <h2 className="section-title">Three Simple Steps</h2>
           <p className="section-sub">From CSV to verified certificates in minutes</p>
         </div>
-        
+
         <div className="steps-container">
           {[
             { num: '1', title: 'Upload CSV', desc: 'Names, emails, roles' },
@@ -217,7 +228,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── CTA Banner ── */}
       <section className="landing__cta-banner">
         <h2 className="cta__title">Ready to issue your first certificate?</h2>
         <p className="cta__sub">Join hundreds of organizations using CertiVerify</p>
@@ -225,6 +235,21 @@ export default function Landing() {
           Get Started Free <ArrowRight size={18} />
         </Link>
       </section>
+
+      <footer className="landing__footer">
+        <div className="footer__inner">
+          <div className="footer__brand">
+            <span>CertiVerify</span>
+            <p>Built with React + Flask + Firebase</p>
+          </div>
+          <div className="footer__links">
+            <a href="#/">Home</a>
+            <a href="#/verify">Verify</a>
+            <a href="https://github.com/shridharkale" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </div>
+          <p className="footer__copy">© 2026 CertiVerify · Made by Shridhar Kale</p>
+        </div>
+      </footer>
     </div>
   );
 }

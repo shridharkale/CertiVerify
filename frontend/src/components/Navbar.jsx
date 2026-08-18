@@ -27,7 +27,7 @@ export default function Navbar() {
   return (
     <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
       <div className="navbar__inner">
-        {/* Logo */}
+        
         <Link to="/" className="navbar__logo">
           <div className="logo-icon">
             <Shield size={18} strokeWidth={2.5} />
@@ -37,7 +37,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Links */}
+        
         <div className="navbar__links">
           <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>
             <Home size={15} />
@@ -55,7 +55,7 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Actions */}
+        
         <div className="navbar__actions">
           {isLoggedIn ? (
             <>
@@ -79,7 +79,7 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Hamburger */}
+        
         <button
           className="btn-icon navbar__hamburger"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -89,7 +89,7 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Menu */}
+      
       {menuOpen && (
         <div className="navbar__mobile">
           <Link to="/" className="mobile-link" onClick={() => setMenuOpen(false)}><Home size={16} /> Home</Link>

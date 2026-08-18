@@ -71,7 +71,7 @@ export default function EventGallery() {
           </div>
         ) : (
           <div className="flex flex-col gap-6 w-full">
-            {/* Search Bar */}
+            
             <div className="verify__form glass-card" style={{ padding: '16px' }}>
               <div className="verify__input-wrapper">
                 <Search size={16} className="input-icon" />
@@ -85,13 +85,13 @@ export default function EventGallery() {
               </div>
             </div>
 
-            {/* List count */}
+            
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '14px' }}>
               <span>Showing {filteredCerts.length} of {certificates.length} certificates</span>
               <span className="badge badge-primary">{certificates.length} issued</span>
             </div>
 
-            {/* Gallery Grid */}
+            
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',

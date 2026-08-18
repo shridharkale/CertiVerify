@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../utils/api';
 import './Auth.css';
 
@@ -10,6 +10,10 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    document.title = 'Sign In — CertiVerify';
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -33,100 +37,90 @@ export default function Login() {
   };
 
   return (
-    <div className="auth__wrapper">
-      <div className="auth__card glass-card animate-slide-up">
-        {/* Logo */}
-        <div className="auth__logo">
+    <div className="auth__page">
+      
+      <div className="auth__left">
+        <div className="auth__left-logo">
           <div className="logo-icon">
-            <Shield size={22} strokeWidth={2.5} />
+            <Shield size={22} strokeWidth={2.5}/>
           </div>
-          <span className="auth__brand">CertiVerify</span>
+          <span>Certi<em>Verify</em></span>
         </div>
-
-        <h1 className="auth__title">Welcome back</h1>
-        <p className="auth__sub">Sign in to your organiser account</p>
-
-        {error && (
-          <div className="alert alert-error animate-fade-in">
-            <AlertCircle size={16} />
-            {error}
-          </div>
-        )}
-
-        <form className="auth__form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="label">Email Address</label>
-            <div className="input-wrapper">
-              <Mail size={16} className="input-icon" />
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                className="input-glass input-with-icon"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={handleChange}
-                required
-                autoComplete="email"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="label">Password</label>
-            <div className="input-wrapper">
-              <Lock size={16} className="input-icon" />
-              <input
-                id="login-password"
-                name="password"
-                type={showPass ? 'text' : 'password'}
-                className="input-glass input-with-icon input-with-action"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={handleChange}
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="input-action"
-                onClick={() => setShowPass(!showPass)}
-                aria-label="Toggle password visibility"
-              >
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            id="login-submit"
-            type="submit"
-            className="btn btn-primary w-full"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <span className="spinner" /> Signing in...
-              </>
-            ) : (
-              <>
-                Sign In <ArrowRight size={16} />
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="divider" />
-
-        <p className="auth__switch">
-          Don't have an account?{' '}
-          <Link to="/register" className="auth__link">Create one free</Link>
+        <h2 className="auth__left-headline">
+          Issue Certificates.<br/>
+          <span>Verify Instantly.</span>
+        </h2>
+        <p className="auth__left-desc">
+          The fastest way to generate and verify 
+          tamper-proof certificates at scale.
         </p>
+        <div className="auth__left-features">
+          <div><CheckCircle size={16}/> Smart CSV deduplication</div>
+          <div><CheckCircle size={16}/> QR code verification</div>
+          <div><CheckCircle size={16}/> Analytics dashboard</div>
+          <div><CheckCircle size={16}/> Instant PDF generation</div>
+        </div>
       </div>
 
-      {/* Decorative blobs */}
-      <div className="auth__blob auth__blob--1" />
-      <div className="auth__blob auth__blob--2" />
+      <div className="auth__right">
+        <div className="auth__right-inner">
+          <h1 className="auth__right-title">Welcome back</h1>
+          <p className="auth__right-sub">
+            Sign in to your organiser account
+          </p>
+          {error && (
+            <div className="alert alert-error">
+              <AlertCircle size={16}/> {error}
+            </div>
+          )}
+          <form className="auth__form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Email Address</label>
+              <div className="input-wrapper">
+                <Mail size={16} className="input-icon"/>
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <div className="input-wrapper">
+                <Lock size={16} className="input-icon"/>
+                <input
+                  name="password"
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button type="button" className="input-action"
+                  onClick={() => setShowPass(!showPass)}>
+                  {showPass ? <EyeOff size={16}/> : <Eye size={16}/>}
+                </button>
+              </div>
+            </div>
+            <button type="submit" 
+              className="btn-primary-auth"
+              disabled={loading}>
+              {loading 
+                ? <><span className="spinner"/> Signing in...</>
+                : <>Sign In <ArrowRight size={16}/></>
+              }
+            </button>
+          </form>
+          <p className="auth__switch">
+            Don't have an account?{' '}
+            <Link to="/register">Create one free</Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

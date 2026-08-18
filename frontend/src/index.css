@@ -7,7 +7,7 @@
 }
 
 :root {
-  /* Stripe-inspired Dark Theme */
+  
   --bg-primary: #080611;
   --bg-secondary: #0d0a1e;
   --bg-card: #12091e;
@@ -21,7 +21,7 @@
   --accent-orange: #f97316;
   --accent-red: #ef4444;
   
-  /* Legacy vars for compatibility */
+  
   --primary: #7c3aed;
   --primary-light: #a78bfa;
   --primary-dark: #6d28d9;
@@ -30,26 +30,26 @@
   --font-heading: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
-  /* Spacing and sizing */
+  
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
   --radius-full: 9999px;
   
-  /* Transitions */
+  
   --transition-fast: 0.15s ease;
   --transition-base: 0.3s ease;
   --transition-slow: 0.5s ease;
   
-  /* Legacy glass theme variables reworked for dark solid style */
+  
   --glass-bg: #12091e;
   --glass-bg-strong: #1c1430;
   --glass-blur: none;
   --glass-border: #2d1b69;
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
   
-  /* Font vars for legacy code */
+  
   --font-primary: 'Inter', sans-serif;
   --font-secondary: 'Inter', sans-serif;
 }
@@ -73,16 +73,17 @@ body {
   min-height: 100vh;
 }
 
-/* ── Video Background ── */
-
-
 .page-content {
   position: relative;
   z-index: 1;
   min-height: 100vh;
 }
 
-/* ── Glass Components Reworked as Solid Cards ── */
+/* Avoid fixed navbar overlap */
+.page-content {
+  padding-top: 80px;
+}
+
 .glass,
 .glass-strong,
 .glass-card {
@@ -100,7 +101,6 @@ body {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* ── Buttons ── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -187,7 +187,6 @@ body {
   transform: scale(1.08);
 }
 
-/* ── Form Inputs ── */
 .input-glass {
   width: 100%;
   padding: 14px 18px;
@@ -221,7 +220,6 @@ body {
   letter-spacing: 0.8px;
 }
 
-/* ── Badges ── */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -251,7 +249,6 @@ body {
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
-/* ── Animations ── */
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   33% { transform: translateY(-15px) rotate(1deg); }
@@ -306,7 +303,6 @@ body {
 .animate-spin-slow { animation: spin-slow 20s linear infinite; }
 .animate-bounce-subtle { animation: bounce-subtle 2s ease-in-out infinite; }
 
-/* ── Gradient Text ── */
 .gradient-text {
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
   -webkit-background-clip: text;
@@ -316,7 +312,6 @@ body {
   animation: gradient-shift 4s ease infinite;
 }
 
-/* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -331,7 +326,6 @@ body {
   background: rgba(99, 102, 241, 0.7);
 }
 
-/* ── Utility ── */
 .text-center { text-align: center; }
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
@@ -346,14 +340,12 @@ body {
 .relative { position: relative; }
 .absolute { position: absolute; }
 
-/* ── Divider ── */
 .divider {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
   margin: 20px 0;
 }
 
-/* ── Alert/Toast ── */
 .alert {
   padding: 14px 18px;
   border-radius: var(--radius-md);
@@ -380,4 +372,40 @@ body {
   background: rgba(99, 102, 241, 0.12);
   border: 1px solid rgba(99, 102, 241, 0.3);
   color: var(--primary);
+}
+
+.network-banner {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  max-width: calc(100% - 32px);
+  background: rgba(18, 9, 30, 0.96);
+  color: white;
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  border-radius: 14px;
+  padding: 12px 18px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.page-loader {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.loader-ring {
+  width: 46px;
+  height: 46px;
+  border: 5px solid rgba(124, 58, 237, 0.2);
+  border-top-color: var(--accent-purple);
+  border-radius: 50%;
+  animation: spin-slow 1.2s linear infinite;
 }

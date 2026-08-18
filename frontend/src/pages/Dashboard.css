@@ -1,4 +1,3 @@
-/* Dashboard Layout */
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
@@ -95,7 +94,6 @@
   color: var(--text-secondary);
 }
 
-/* Stats Summary Cards */
 .dashboard__stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -146,7 +144,6 @@
   font-weight: 500;
 }
 
-/* Panels & Sections */
 .dashboard__panel {
   display: flex;
   flex-direction: column;
@@ -188,14 +185,12 @@
   margin-top: 16px;
 }
 
-/* Event Details Form */
 .event-form {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
-/* CSV Drop Zone */
 .drop-zone {
   border: 2px dashed rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
@@ -258,7 +253,6 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* Spinner indicators */
 .spinner-dark {
   width: 14px;
   height: 14px;
@@ -287,7 +281,6 @@
   animation: spin-slow 0.8s linear infinite;
 }
 
-/* Empty Registry state */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -298,7 +291,6 @@
   font-size: 15px;
 }
 
-/* CSV and registry Tables */
 .table-wrapper {
   overflow-x: auto;
 }
@@ -363,6 +355,27 @@
   gap: 6px;
 }
 
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.btn-icon:hover {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: var(--accent-purple);
+}
+
 .csv-preview {
   margin-bottom: 16px;
 }
@@ -387,7 +400,78 @@
   margin-bottom: 0;
 }
 
-/* Responsive Media Queries */
+.verify__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.verify__input-wrapper .input-icon {
+  position: absolute;
+  left: 14px;
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.verify__input-wrapper .input-with-icon {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  background: #0f0820;
+  border: 1px solid #2d1b69;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: var(--font-primary);
+  transition: all var(--transition-base);
+}
+
+.verify__input-wrapper .input-with-icon:focus {
+  outline: none;
+  border-color: rgba(124, 58, 237, 0.7);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  background: #1c1430;
+}
+
+.progress-bar-wrapper {
+  margin-top: 18px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar-wrapper p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+}
+
+.progress-bar {
+  height: 8px;
+  background: linear-gradient(90deg, #7c3aed, #2563eb);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.5);
+}
+
+.progress-bar-wrapper::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  position: relative;
+}
+
+.progress-bar-wrapper {
+  position: relative;
+}
+
 @media (max-width: 900px) {
   .dashboard-layout {
     flex-direction: column;
@@ -494,6 +578,15 @@
 
   .dashboard-main {
     padding: 24px 16px 120px;
+  }
+
+  .certs-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-section {
+    padding: 20px 16px;
   }
 }
 

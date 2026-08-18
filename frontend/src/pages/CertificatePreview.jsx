@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Shield, Download, ExternalLink, ArrowLeft, CheckCircle, Calendar, User, Award, Hash, Loader } from 'lucide-react';
+import { Shield, Download, ExternalLink, ArrowLeft, CheckCircle, Calendar, User, Award, Hash, Loader, Copy, Printer } from 'lucide-react';
 import api from '../utils/api';
 import './CertificatePreview.css';
 
@@ -10,6 +10,7 @@ export default function CertificatePreview() {
   const [certificate, setCertificate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -24,6 +25,20 @@ export default function CertificatePreview() {
     };
     load();
   }, [cert_id]);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(verifyUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/certificates/download/${cert_id}`;
   const verifyUrl = `${window.location.origin}/CertiVerify/#/verify/${cert_id}`;
@@ -162,7 +177,15 @@ export default function CertificatePreview() {
             <Download size={16} /> Download Certificate PDF
           </a>
 
-          {/* LinkedIn Share Button */}
+          <button type="button" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }} onClick={handlePrint}>
+            <Printer size={16} /> Print Certificate
+          </button>
+
+          <button type="button" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }} onClick={handleCopyLink}>
+            <Copy size={16} /> {copied ? 'Link Copied' : 'Copy Verify Link'}
+          </button>
+
+          
           <a
             href={`https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(certificate.event_name)}&organizationName=${encodeURIComponent(certificate.organisation || 'CertiVerify')}&certUrl=${encodeURIComponent(verifyUrl)}&certId=${encodeURIComponent(certificate.cert_id)}`}
             target="_blank"

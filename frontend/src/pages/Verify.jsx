@@ -1,21 +1,55 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Shield, CheckCircle, XCircle, AlertCircle, Download, Calendar, Award, User, Hash, Loader, Clock, Building } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, AlertCircle, Download, Search, Calendar, Award, User, Hash, Loader, Clock, Building } from 'lucide-react';
 import api from '../utils/api';
 import './Verify.css';
 
 export default function Verify() {
   const { cert_id } = useParams();
   const [certId, setCertId] = useState(cert_id || '');
-  const [status, setStatus] = useState(null); // 'loading', 'valid', 'expired', 'invalid', 'error'
+  const [status, setStatus] = useState(null);
   const [certificate, setCertificate] = useState(null);
   const [searched, setSearched] = useState(false);
+  const [verifyTab, setVerifyTab] = useState('verify');
+  const [historyQuery, setHistoryQuery] = useState('');
+  const [recentHistory, setRecentHistory] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('cv_verify_history');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    document.title = 'Verify Certificate — CertiVerify';
+  }, []);
 
   useEffect(() => {
     if (cert_id) {
       handleVerify(cert_id);
     }
   }, [cert_id]);
+
+  useEffect(() => {
+    sessionStorage.setItem('cv_verify_history', JSON.stringify(recentHistory));
+  }, [recentHistory]);
+
+  const saveVerifyHistory = (entry) => {
+    setRecentHistory((current) => {
+      const filtered = current.filter(item => item.cert_id !== entry.cert_id);
+      return [entry, ...filtered].slice(0, 10);
+    });
+  };
+
+  const filteredHistory = recentHistory.filter(item => {
+    const query = historyQuery.toLowerCase();
+    return (
+      item.name?.toLowerCase().includes(query) ||
+      item.cert_id?.toLowerCase().includes(query) ||
+      item.event_name?.toLowerCase().includes(query)
+    );
+  });
 
   const handleVerify = async (id = certId) => {
     if (!id.trim()) return;
@@ -25,6 +59,15 @@ export default function Verify() {
     try {
       const res = await api.get(`/verify/${id.trim()}`);
       setCertificate(res.data.certificate);
+      if (res.data.certificate) {
+        saveVerifyHistory({
+          cert_id: res.data.certificate.cert_id,
+          name: res.data.certificate.name,
+          event_name: res.data.certificate.event_name,
+          status: res.data.status || 'valid',
+          verified_at: Date.now(),
+        });
+      }
       if (res.data.status === 'EXPIRED') {
         setStatus('expired');
       } else {
@@ -44,8 +87,10 @@ export default function Verify() {
     handleVerify();
   };
 
-  const getDownloadUrl = (certId) =>
-    `${import.meta.env.VITE_API_BASE_URL}/certificates/download/${certId}`;
+  const getDownloadUrl = (id) =>
+    `${import.meta.env.VITE_API_BASE_URL}/certificates/download/${id}`;
+
+  const quickRecent = recentHistory.slice(0, 3);
 
   return (
     <div className="verify__wrapper">
@@ -60,35 +105,138 @@ export default function Verify() {
           Query the Firestore ledger. Input a certificate ID to instantly evaluate integrity.
         </p>
 
-        <form className="verify__form glass-card" onSubmit={handleSubmit} style={{ position: 'relative', overflow: 'hidden' }}>
-          {status === 'loading' && (
-            <div className="scanner-bar" />
-          )}
-          <div className="verify__input-row">
-            <div className="verify__input-wrapper">
-              <Hash size={16} className="input-icon" />
+        <div className="verify__mode-switch">
+          <button type="button" className={`toggle-pill ${verifyTab === 'verify' ? 'active' : ''}`} onClick={() => setVerifyTab('verify')}>
+            Verify by ID
+          </button>
+          <button type="button" className={`toggle-pill ${verifyTab === 'recent' ? 'active' : ''}`} onClick={() => setVerifyTab('recent')}>
+            Recent History
+          </button>
+          <button type="button" className={`toggle-pill ${verifyTab === 'search' ? 'active' : ''}`} onClick={() => setVerifyTab('search')}>
+            Search by Name
+          </button>
+        </div>
+
+        {verifyTab === 'verify' && (
+          <form className="verify__form glass-card" onSubmit={handleSubmit} style={{ position: 'relative', overflow: 'hidden' }}>
+            {status === 'loading' && (
+              <div className="scanner-bar" />
+            )}
+            <div className="verify__input-row">
+              <div className="verify__input-wrapper">
+                <Hash size={16} className="input-icon" />
+                <input
+                  id="verify-cert-id"
+                  type="text"
+                  className="input-glass input-with-icon"
+                  placeholder="e.g. CERT-2026-X8Y9"
+                  value={certId}
+                  onChange={e => setCertId(e.target.value)}
+                  style={{ fontFamily: 'monospace' }}
+                />
+              </div>
+              <button id="verify-submit" type="submit" className="btn btn-primary" disabled={status === 'loading'}>
+                {status === 'loading'
+                  ? <><Loader size={16} className="spin-icon" /> Querying...</>
+                  : <><Shield size={16} /> Execute Verify</>}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {verifyTab === 'verify' && quickRecent.length > 0 && (
+          <div className="recent-verified">
+            <p>Recently verified:</p>
+            <div className="recent-verified__chips">
+              {quickRecent.map(entry => (
+                <button
+                  key={entry.cert_id}
+                  type="button"
+                  className="recent-chip"
+                  onClick={() => { setCertId(entry.cert_id); handleVerify(entry.cert_id); }}
+                  title={entry.name || entry.cert_id}
+                >
+                  {entry.cert_id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {verifyTab === 'recent' && (
+          <div className="verify__history glass-card">
+            <div className="history-header">
+              <div>
+                <h3>Recent Verifications</h3>
+                <p>Review the latest IDs you've verified this session.</p>
+              </div>
+            </div>
+            {recentHistory.length === 0 ? (
+              <div className="empty-state">No recent verification history yet.</div>
+            ) : (
+              <div className="history-list">
+                {recentHistory.map(entry => (
+                    <button
+                    key={entry.cert_id}
+                    type="button"
+                    className="history-item"
+                    onClick={() => { setVerifyTab('verify'); setCertId(entry.cert_id); handleVerify(entry.cert_id); }}
+                  >
+                    <div>
+                      <div className="history-title">{entry.name || entry.cert_id}</div>
+                      <div className="history-sub">{entry.event_name || 'No event'} · {new Date(entry.verified_at).toLocaleString()}</div>
+                    </div>
+                    <span className="badge badge-primary">{entry.status?.toLowerCase()}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {verifyTab === 'search' && (
+          <div className="verify__history glass-card">
+            <div className="history-header">
+              <div>
+                <h3>Search Recent History</h3>
+                <p>Type a name, event, or certificate ID from your recent lookups.</p>
+              </div>
+            </div>
+            <div className="verify__input-wrapper" style={{ marginBottom: '16px' }}>
+              <Search size={16} className="input-icon" />
               <input
-                id="verify-cert-id"
                 type="text"
                 className="input-glass input-with-icon"
-                placeholder="e.g. CERT-2026-X8Y9"
-                value={certId}
-                onChange={e => setCertId(e.target.value)}
-                style={{ fontFamily: 'monospace' }}
+                placeholder="Search by recipient, event or ID..."
+                value={historyQuery}
+                onChange={e => setHistoryQuery(e.target.value)}
               />
             </div>
-            <button id="verify-submit" type="submit" className="btn btn-primary" disabled={status === 'loading'}>
-              {status === 'loading'
-                ? <><Loader size={16} className="spin-icon" /> Querying...</>
-                : <><Shield size={16} /> Execute Verify</>}
-            </button>
+            {filteredHistory.length === 0 ? (
+              <div className="empty-state">No matches found in recent history.</div>
+            ) : (
+              <div className="history-list">
+                {filteredHistory.map(entry => (
+                  <button
+                    key={entry.cert_id}
+                    type="button"
+                    className="history-item"
+                    onClick={() => { setVerifyTab('verify'); setCertId(entry.cert_id); handleVerify(entry.cert_id); }}
+                  >
+                    <div>
+                      <div className="history-title">{entry.name || entry.cert_id}</div>
+                      <div className="history-sub">{entry.event_name || 'No event'} · {new Date(entry.verified_at).toLocaleString()}</div>
+                    </div>
+                    <span className="badge badge-primary">{entry.status?.toLowerCase()}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        </form>
+        )}
 
         {searched && status !== 'loading' && (
           <div className={`verify__result glass-card animate-slide-up ${status}`}>
-            
-            {/* VALID STATUS CARD */}
             {status === 'valid' && certificate && (
               <>
                 <div className="result__status valid">
@@ -101,7 +249,6 @@ export default function Verify() {
 
                 <div className="divider" />
 
-                {/* Timeline Visual */}
                 <div className="timeline-container">
                   <h4 className="timeline-title">Verification Ledger Timeline</h4>
                   <div className="timeline-path">
@@ -126,7 +273,7 @@ export default function Verify() {
                       <div className="step-content">
                         <span className="step-label">Expiration Threshold</span>
                         <span className="step-date">
-                          {certificate.expiry_date 
+                          {certificate.expiry_date
                             ? `Valid until ${new Date(certificate.expiry_date * 1000).toLocaleDateString()}`
                             : 'Lifetime Validity (Never Expires)'}
                         </span>
@@ -204,7 +351,6 @@ export default function Verify() {
               </>
             )}
 
-            {/* EXPIRED STATUS CARD */}
             {status === 'expired' && certificate && (
               <>
                 <div className="result__status expired" style={{ color: '#f59e0b', display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -221,7 +367,6 @@ export default function Verify() {
 
                 <div className="divider" />
 
-                {/* Timeline Visual (Expired state) */}
                 <div className="timeline-container">
                   <h4 className="timeline-title">Verification Ledger Timeline</h4>
                   <div className="timeline-path">
@@ -246,7 +391,7 @@ export default function Verify() {
                       <div className="step-content">
                         <span className="step-label">Expiration Date</span>
                         <span className="step-date">
-                          {certificate.expiry_date 
+                          {certificate.expiry_date
                             ? new Date(certificate.expiry_date * 1000).toLocaleDateString()
                             : 'N/A'}
                         </span>
@@ -289,7 +434,6 @@ export default function Verify() {
               </>
             )}
 
-            {/* INVALID STATUS CARD */}
             {status === 'invalid' && (
               <div className="result__status invalid">
                 <XCircle size={40} color="#ef4444" />
@@ -302,7 +446,6 @@ export default function Verify() {
               </div>
             )}
 
-            {/* ERROR STATUS CARD */}
             {status === 'error' && (
               <div className="result__status error">
                 <AlertCircle size={40} color="#ef4444" />
