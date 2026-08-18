@@ -2,6 +2,7 @@ import { useEffect, useState, Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
+import NotFound from './pages/NotFound';
 import './index.css';
 
 const Landing = lazy(() => import('./pages/Landing'));
@@ -64,6 +65,7 @@ function App() {
           <Route path="/verify/:cert_id" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><Verify /></Suspense></ErrorBoundary>} />
           <Route path="/certificate/:cert_id" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><CertificatePreview /></Suspense></ErrorBoundary>} />
           <Route path="/event/:event_name" element={<ErrorBoundary><Suspense fallback={<PageLoader />}><EventGallery /></Suspense></ErrorBoundary>} />
+          <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />
         </Routes>
       </div>
     </HashRouter>

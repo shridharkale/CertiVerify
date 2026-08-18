@@ -13,6 +13,7 @@ export default function Verify() {
   const [status, setStatus] = useState(null);
   const [certificate, setCertificate] = useState(null);
   const [searched, setSearched] = useState(false);
+  const [isWarmingUp, setIsWarmingUp] = useState(false);
   const [verifyTab, setVerifyTab] = useState('verify');
   const [historyQuery, setHistoryQuery] = useState('');
   const [recentHistory, setRecentHistory] = useState(() => {
@@ -62,8 +63,13 @@ export default function Verify() {
     setStatus('loading');
     setCertificate(null);
     setSearched(true);
+    setIsWarmingUp(true);
+    const t0 = Date.now();
     try {
       const res = await api.get(`/verify/${id.trim()}`);
+      const elapsed = Date.now() - t0;
+      setIsWarmingUp(false);
+      
       setCertificate(res.data.certificate);
       if (res.data.certificate) {
         saveVerifyHistory({
@@ -82,6 +88,7 @@ export default function Verify() {
         handleVerifyResult({ valid: true, status: 'valid' }, res.data.certificate);
       }
     } catch (err) {
+      setIsWarmingUp(false);
       if (err.response?.status === 404) {
         setStatus('invalid');
         handleVerifyResult({ valid: false, status: 'invalid' });
@@ -216,7 +223,7 @@ export default function Verify() {
       <div className="verify__inner">
         <div className="verify__badge">
           <Shield size={14} />
-          Analytical Security Registry
+          Instant Verification Engine
         </div>
 
         <h1 className="verify__title">Verify Authenticity</h1>
@@ -261,6 +268,12 @@ export default function Verify() {
               </button>
             </div>
           </form>
+        )}
+
+        {isWarmingUp && (
+          <div style={{ padding: '16px', background: 'rgba(79, 70, 229, 0.1)', border: '1px solid rgba(79, 70, 229, 0.2)', borderRadius: '8px', marginTop: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '14px' }}>
+            ☕ Waking up the server… this takes ~5s on first load
+          </div>
         )}
 
         {verifyTab === 'verify' && quickRecent.length > 0 && (
