@@ -1,0 +1,8 @@
+﻿serviceAccountKey.json
+.env
+__pycache__/
+*.pyc
+qrcodes/
+generated_certs/
+uploads/
+desktop.ini

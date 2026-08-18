@@ -1,12 +1,12 @@
 import requests
 import os
+import logging
 from flask import Blueprint, request, jsonify
-from firebase_admin import auth
+from firebase_admin import auth as firebase_auth  # ✅ renamed to avoid conflict
+from app import limiter
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
-# Firebase Auth REST API — used for email/password sign-in
-# Admin SDK can create users but can't sign them in (that's client-side)
 FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY")
 FIREBASE_SIGNIN_URL = (
     f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
@@ -15,33 +15,37 @@ FIREBASE_SIGNIN_URL = (
 
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("5 per minute")
 def register():
-    data = request.get_json()
-    name = data.get("name")
-    email = data.get("email")
-    password = data.get("password")
-    organisation = data.get("organisation", "")
-
-    if not all([name, email, password]):
-        return jsonify({"error": "name, email, password required"}), 400
-
-    # ✅ Bug 2 fix — actually create the user in Firebase
     try:
-        user = auth.create_user(
+        data = request.get_json(force=True, silent=True)  # ✅ force=True ignores Content-Type
+        if not data:
+            return jsonify({"error": "Invalid JSON body"}), 400
+
+        name = data.get("name")
+        email = data.get("email")
+        password = data.get("password")
+
+        if not all([name, email, password]):
+            return jsonify({"error": "name, email, password required"}), 400
+
+        user = firebase_auth.create_user(
             email=email,
             password=password,
             display_name=name,
         )
         return jsonify({"message": "Registered successfully", "uid": user.uid}), 201
 
-    except auth.EmailAlreadyExistsError:
+    except firebase_auth.EmailAlreadyExistsError:
         return jsonify({"error": "An account with this email already exists"}), 409
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logging.exception("Register error")
+        return jsonify({"error": "An error occurred. Please try again."}), 500
 
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit("5 per minute")
 def login():
     data = request.get_json()
     email = data.get("email")
@@ -66,7 +70,7 @@ def login():
         id_token = resp_data["idToken"]
 
         # Verify the token and pull display name from Firebase
-        decoded = auth.verify_id_token(id_token)
+        decoded = firebase_auth.verify_id_token(id_token)
 
         return jsonify({
             "token": id_token,           # ✅ real Firebase ID token
@@ -78,4 +82,5 @@ def login():
         }), 200
 
     except Exception as e:
-        return jsonify({"error": "Login failed", "details": str(e)}), 500
+        logging.exception("Login error")
+        return jsonify({"error": "An error occurred. Please try again."}), 500

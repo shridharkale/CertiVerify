@@ -1,50 +1,55 @@
+import re
+import time
+from cachetools import TTLCache
 from flask import Blueprint, jsonify
-
-# Import the shared Firestore client from firebase_config.py
 from firebase_config import db
+from app import limiter
 
-# Create a Blueprint — this groups related routes together
-# "verify" is the name of this blueprint
 verify_bp = Blueprint("verify", __name__)
 
+# ── Bounded LRU cache — replaces any unbounded dict ──────────────────────────
+# Max 1000 entries, each expires after 5 minutes
+_cert_cache = TTLCache(maxsize=1000, ttl=300)
+
+# ── Input validator — alphanumeric + hyphens only, 4–50 chars ────────────────
+CERT_ID_RE = re.compile(r'^[A-Za-z0-9\-]{4,50}$')
+
+def _valid_cert_id(cert_id: str) -> bool:
+    return bool(CERT_ID_RE.match(cert_id))
 
 @verify_bp.route("/api/verify/<cert_id>", methods=["GET"])
+@limiter.limit("30 per minute")
 def verify_certificate(cert_id):
-    """
-    GET /api/verify/<cert_id>
+    # ── Input validation ───────────────────────────────────────────────────
+    if not _valid_cert_id(cert_id):
+        return jsonify({"valid": False, "error": "Invalid certificate ID format"}), 400
 
-    Looks up a certificate by its unique ID in Firestore.
-    Returns VALID with certificate details if found,
-    or INVALID if the cert_id doesn't exist.
-
-    Example:
-        GET /api/verify/abc-123-xyz
-    """
-
-    # --- Step 1: Reference the "certificates" collection in Firestore ---
-    # Think of a collection like a table, and each document like a row
+    # ── Cache lookup ───────────────────────────────────────────────────────
+    if cert_id in _cert_cache:
+        cert_data = _cert_cache[cert_id]
+        expiry = cert_data.get("expiry_date")
+        now = time.time()
+        if expiry and now > expiry:
+            return jsonify({"status": "EXPIRED", "cert_id": cert_id,
+                          "certificate": cert_data}), 200
+        return jsonify({"status": "VALID", "cert_id": cert_id,
+                       "certificate": cert_data}), 200
+    
+    # ── Firestore lookup ───────────────────────────────────────────────────
     cert_ref = db.collection("certificates").document(cert_id)
-
-    # --- Step 2: Fetch the document from Firestore ---
-    # .get() actually makes the network call to Firebase
     cert_doc = cert_ref.get()
-
-    # --- Step 3: Check if the document exists ---
+    
     if cert_doc.exists:
-        # --- Step 4a: Document found → convert it to a Python dict ---
         cert_data = cert_doc.to_dict()
-
-        # Return a JSON response with status VALID and all certificate fields
-        return jsonify({
-            "status"     : "VALID",
-            "cert_id"    : cert_id,
-            "certificate": cert_data   # e.g. name, email, event, date, role
-        }), 200
-
+        _cert_cache[cert_id] = cert_data
+        
+        expiry = cert_data.get("expiry_date")
+        now = time.time()
+        if expiry and now > expiry:
+            return jsonify({"status": "EXPIRED", "cert_id": cert_id,
+                          "certificate": cert_data}), 200
+        return jsonify({"status": "VALID", "cert_id": cert_id,
+                       "certificate": cert_data}), 200
     else:
-        # --- Step 4b: Document not found → return INVALID status ---
-        return jsonify({
-            "status" : "INVALID",
-            "cert_id": cert_id,
-            "message": "Certificate not found."
-        }), 404
+        return jsonify({"status": "INVALID", "cert_id": cert_id,
+                       "message": "Certificate not found."}), 404
