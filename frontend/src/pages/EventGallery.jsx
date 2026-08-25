@@ -2,19 +2,27 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Shield, Calendar, User, Award, Hash, Search, ArrowLeft, Loader, ExternalLink } from 'lucide-react';
 import api from '../utils/api';
-import './Verify.css'; // Re-use verification and page layouts, but we will add custom gallery styles if needed
 
 export default function EventGallery() {
-  const { event_name } = useParams();
+  const { event_name: eventParam } = useParams();
+  const [eventInput, setEventInput] = useState(eventParam || '');
+  const [eventName, setEventName] = useState(eventParam || '');
   const [certificates, setCertificates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(eventParam));
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchEventCertificates = async () => {
+      if (!eventName) {
+        setLoading(false);
+        setCertificates([]);
+        return;
+      }
+      setLoading(true);
+      setError('');
       try {
-        const res = await api.get(`/certificates/public-event/${encodeURIComponent(event_name)}`);
+        const res = await api.get(`/certificates/public-event/${encodeURIComponent(eventName)}`);
         setCertificates(res.data.certificates || []);
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to load event certificates.');
@@ -22,10 +30,8 @@ export default function EventGallery() {
         setLoading(false);
       }
     };
-    if (event_name) {
-      fetchEventCertificates();
-    }
-  }, [event_name]);
+    fetchEventCertificates();
+  }, [eventName]);
 
   const filteredCerts = certificates.filter(c =>
     (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -47,11 +53,28 @@ export default function EventGallery() {
         </div>
 
         <h1 className="verify__title" style={{ fontSize: 'clamp(24px, 4vw, 42px)' }}>
-          {event_name}
+          {eventName || 'Event gallery'}
         </h1>
         <p className="verify__sub">
           Official certificates registry for this event. Anyone can view and verify achievements below.
         </p>
+
+        <form
+          className="verify__form glass-card"
+          style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '10px' }}
+          onSubmit={(e) => { e.preventDefault(); setEventName(eventInput.trim()); }}
+        >
+          <input
+            type="text"
+            className="input"
+            placeholder="Enter event name"
+            value={eventInput}
+            onChange={(e) => setEventInput(e.target.value)}
+          />
+          <button type="submit" className="btn btn-primary" disabled={!eventInput.trim()}>
+            <Search size={14} /> Look up
+          </button>
+        </form>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: '16px' }}>
@@ -63,6 +86,11 @@ export default function EventGallery() {
             <Shield size={48} color="rgba(239, 68, 68, 0.4)" style={{ marginBottom: '16px' }} />
             <h2>Error Loading Event</h2>
             <p>{error}</p>
+          </div>
+        ) : !eventName ? (
+          <div className="verify__result glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+            <Award size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+            <p>Enter an event name to view its public certificate registry.</p>
           </div>
         ) : certificates.length === 0 ? (
           <div className="verify__result glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>

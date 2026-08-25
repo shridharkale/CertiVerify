@@ -1,798 +1,242 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import anime from 'animejs';
-import {
-  UploadCloud, FileText, Play, Download, Trash2,
-  CheckCircle, AlertCircle, BarChart2,
-  Users, Award, Calendar, RefreshCw, Eye,
-  LogOut, Settings, LayoutDashboard, Database,
-  FileSpreadsheet, Search, Sparkles, Copy
-} from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell
-} from 'recharts';
-import api from '../utils/api';
-import { EASE } from '../lib/motion/easings';
-import { MOTION_OK } from '../lib/motion/reducedMotion';
-import './Dashboard.css';
+﻿import { useState, useEffect, useRef } from "react"
+import { motion } from "framer-motion"
+import { LayoutDashboard, FileText, Upload, LogOut, ShieldCheck, CheckCircle, Loader2, CloudUpload, X, Download } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../utils/auth"
+import { useToast } from "../utils/useToast"
+import Navbar from "../components/Navbar"
+import api, { getApiError } from "../utils/api"
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] } })
+}
+const NAV = [
+  { id: "overview", label: "Overview", icon: <LayoutDashboard size={16} /> },
+  { id: "issue", label: "Issue", icon: <Upload size={16} /> },
+  { id: "certs", label: "Certificates", icon: <FileText size={16} /> },
+]
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('cv_user') || '{}');
-  const fileRef = useRef(null);
+  const { user, logout } = useAuth()
+  const { showToast, ToastContainer } = useToast()
+  const navigate = useNavigate()
+  const fileRef = useRef()
+  const [tab, setTab] = useState("overview")
+  const [stats, setStats] = useState({ total: 0, events: 0, recent: 0 })
+  const [certs, setCerts] = useState([])
+  const [certsLoading, setCertsLoading] = useState(false)
+  const [form, setForm] = useState({ eventName: "", eventDate: "", issuedBy: "" })
+  const [file, setFile] = useState(null)
+  const [preview, setPreview] = useState([])
+  const [dragging, setDragging] = useState(false)
+  const [issuing, setIssuing] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const [tab, setTab] = useState('overview');
+  useEffect(() => { loadStats() }, [])
+  useEffect(() => { if (tab === "certs") loadCerts() }, [tab])
 
-  const [csvFile, setCsvFile] = useState(null);
-  const [csvPreview, setCsvPreview] = useState([]);
-  const [eventDetails, setEventDetails] = useState({
-    event_name: '',
-    event_date: '',
-    organisation: '',
-    expiry_date: ''
-  });
-  const [dragOver, setDragOver] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
-  const [uploadMsg, setUploadMsg] = useState('');
-  const [uploadId, setUploadId] = useState(null);
-
-  const [genStatus, setGenStatus] = useState(null);
-  const [genMsg, setGenMsg] = useState('');
-  const [genProgress, setGenProgress] = useState(0);
-  const [certificates, setCertificates] = useState([]);
-  const [certLoading, setCertLoading] = useState(false);
-
-  const [stats, setStats] = useState({ total: 0, events: 0, recent: 0, expired: 0 });
-  const [uploadedParticipants, setUploadedParticipants] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [copiedId, setCopiedId] = useState(null);
-
-  useEffect(() => {
-    document.title = 'Dashboard — CertiVerify';
-  }, []);
-
-  useEffect(() => {
-    if (!localStorage.getItem('cv_token')) {
-      navigate('/login');
-      return;
-    }
-    fetchCertificates();
-  }, []);
-
-  useEffect(() => {
-    if (genStatus === 'loading') {
-      setGenProgress(0);
-      const interval = setInterval(() => {
-        setGenProgress(p => Math.min(p + 10, 90));
-      }, 300);
-      return () => clearInterval(interval);
-    }
-    if (genStatus === 'success') {
-      setGenProgress(100);
-    }
-    if (genStatus === 'error') {
-      setGenProgress(0);
-    }
-  }, [genStatus]);
-
-  const fetchCertificates = async () => {
-    setCertLoading(true);
+  async function loadStats() {
     try {
-      const res = await api.get('/certificates/list');
-      const list = res.data.certificates || [];
-      setCertificates(list);
-
-      const events = new Set(list.map(c => c.event_name)).size;
-      const nowSeconds = Math.floor(Date.now() / 1000);
-      const expiredCount = list.filter(c => c.expiry_date && nowSeconds > c.expiry_date).length;
-
-      setStats({
-        total: list.length,
-        events,
-        recent: list.filter(c => {
-          const d = new Date(c.created_at);
-          return (Date.now() - d) < 7 * 24 * 3600 * 1000;
-        }).length,
-        expired: expiredCount
-      });
+      const r = await api.get("/certificates/list")
+      const list = r.data.certificates || []
+      const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const events = new Set(list.map((c) => c.event_name).filter(Boolean))
+      const recent = list.filter((c) => {
+        const t = Date.parse(c.created_at || c.event_date || "")
+        return Number.isFinite(t) && t >= monthAgo
+      }).length
+      setStats({ total: list.length, events: events.size, recent })
     } catch {
-      setCertificates([]);
+      try {
+        const r = await api.get("/certificates/public-stats")
+        setStats((s) => ({ ...s, total: r.data.total || 0 }))
+      } catch { /* ignore */ }
+    }
+  }
+  async function loadCerts() {
+    setCertsLoading(true)
+    try {
+      const r = await api.get("/certificates/list")
+      setCerts(r.data.certificates || [])
+    } catch (err) {
+      showToast(getApiError(err, "Could not load certificates"), "error")
     } finally {
-      setCertLoading(false);
+      setCertsLoading(false)
     }
-  };
-
-  // Animate table rows after data loads
-  useEffect(() => {
-    if (!certLoading && certificates.length > 0) {
-      anime({
-        targets: '.table-row',
-        translateY: [20, 0],
-        opacity: [0, 1],
-        duration: 500,
-        easing: EASE.outExpo,
-        delay: anime.stagger(70),
-      });
-    }
-  }, [certLoading, certificates]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('cv_token');
-    localStorage.removeItem('cv_user');
-    navigate('/login');
-  };
-
-  const handleFile = (file) => {
-    if (!file || !file.name.endsWith('.csv')) {
-      setUploadMsg('Please upload a .csv file.');
-      setUploadStatus('error');
-      return;
-    }
-    setCsvFile(file);
-    setUploadStatus(null);
-    setUploadMsg('');
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const lines = e.target.result.split('\n').slice(0, 6);
-      const headers = lines[0]?.split(',') || [];
-      const rows = lines.slice(1).map(l => l.split(','));
-      setCsvPreview({ headers, rows });
-    };
-    reader.readAsText(file);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    handleFile(e.dataTransfer.files[0]);
-  };
-
-  const handleUploadCSV = async () => {
-    if (!csvFile) return;
-    setUploadStatus('loading');
-    setUploadMsg('');
-    const formData = new FormData();
-    formData.append('file', csvFile);
-    Object.entries(eventDetails).forEach(([k, v]) => {
-      if (k !== 'expiry_date') formData.append(k, v);
-    });
+  }
+  function handleFile(f) {
+    if (!f || !f.name.endsWith(".csv")) { showToast("Please upload a .csv file", "error"); return }
+    setFile(f)
+    const reader = new FileReader()
+    reader.onload = (e) => { const rows = e.target.result.split("\n").filter(Boolean); setPreview(rows.slice(0, 5).map((r) => r.split(","))) }
+    reader.readAsText(f)
+  }
+  async function handleIssue() {
+    if (!form.eventName || !form.eventDate || !file) { showToast("Fill in event details and upload a CSV", "error"); return }
+    setIssuing(true); setProgress(0)
     try {
-      const res = await api.post('/certificates/upload-csv', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const participants = res.data.participants || [];
-      setUploadId(res.data.upload_id);
-      setUploadedParticipants(participants);
-      setUploadStatus('success');
-      setUploadMsg(`✓ ${res.data.total_rows} recipients loaded. ${res.data.duplicates?.length || 0} duplicates skipped.`);
-    } catch (err) {
-      setUploadStatus('error');
-      setUploadMsg(err.response?.data?.error || 'Upload failed. Check your CSV format.');
-    }
-  };
-
-  const handleGenerate = async () => {
-    setGenStatus('loading');
-    setGenMsg('');
-    try {
-      const payload = {
-        event_name: eventDetails.event_name,
-        event_date: eventDetails.event_date,
-        organisation: eventDetails.organisation,
-        participants: uploadedParticipants,
-      };
-      if (eventDetails.expiry_date) {
-        payload.expiry_date = eventDetails.expiry_date;
-      }
-      const res = await api.post('/certificates/generate', payload);
-      setGenStatus('success');
-      setGenMsg(`🎉 Generated ${res.data.count} certificates. ${res.data.skipped} duplicates skipped.`);
-      fetchCertificates();
-      setTimeout(() => setTab('certs'), 1500);
-    } catch (err) {
-      setGenStatus('error');
-      setGenMsg(err.response?.data?.error || 'Generation failed.');
-    }
-  };
-
-  const exportToCSV = () => {
-    if (certificates.length === 0) return;
-    const headers = ['Cert ID', 'Recipient Name', 'Recipient Email', 'Role', 'Event Name', 'Event Date', 'Organisation', 'Issued At', 'Expiry Date'];
-    const rows = certificates.map(c => [
-      c.cert_id,
-      c.name,
-      c.email,
-      c.role,
-      c.event_name,
-      c.event_date,
-      c.organisation || '',
-      c.created_at,
-      c.expiry_date ? new Date(c.expiry_date * 1000).toLocaleDateString() : 'Never'
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `issued_certificates_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const copyVerifyLink = (certId) => {
-    const url = `https://shridharkale.github.io/CertiVerify/#/verify/${certId}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedId(certId);
-      setTimeout(() => setCopiedId(null), 1500);
-    }).catch(() => {});
-  };
-
-  const getEventData = () => {
-    const map = {};
-    certificates.forEach(c => {
-      map[c.event_name] = (map[c.event_name] || 0) + 1;
-    });
-    return Object.entries(map).map(([name, count]) => ({ name, count }));
-  };
-
-  const getRoleData = () => {
-    const map = {};
-    certificates.forEach(c => {
-      const role = c.role || 'Participant';
-      map[role] = (map[role] || 0) + 1;
-    });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
-  };
-
-  const getTimelineData = () => {
-    const map = {};
-    certificates.forEach(c => {
-      const d = new Date(c.created_at || Date.now());
-      const key = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
-      map[key] = (map[key] || 0) + 1;
-    });
-    return Object.entries(map).map(([date, count]) => ({ date, count }));
-  };
-
-  const PIE_COLORS = ['#3b82f6', '#10b981', '#06b6d4', '#f59e0b', '#ec4899', '#8b5cf6'];
-
-  const filteredCerts = certificates.filter(c =>
-    (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.event_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.cert_id || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const getExpiryLabel = (expiryDate) => {
-    if (!expiryDate) return { text: 'Active', class: 'badge-success' };
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    if (nowSeconds > expiryDate) {
-      return { text: 'Expired', class: 'badge-warning' };
-    }
-    return { text: 'Active', class: 'badge-success' };
-  };
+      const fd = new FormData()
+      fd.append("event_name", form.eventName)
+      fd.append("event_date", form.eventDate)
+      fd.append("organisation", form.issuedBy || user?.email || "")
+      fd.append("file", file)
+      const tick = setInterval(() => setProgress((p) => Math.min(p + 8, 88)), 300)
+      await api.post("/certificates/issue", fd)
+      clearInterval(tick); setProgress(100)
+      showToast("Certificates issued successfully", "success")
+      setTimeout(() => { setFile(null); setPreview([]); setForm({ eventName: "", eventDate: "", issuedBy: "" }); setProgress(0); setTab("certs"); loadStats(); loadCerts() }, 800)
+    } catch (err) { showToast(getApiError(err, "Issue failed"), "error"); setProgress(0) }
+    finally { setIssuing(false) }
+  }
+  const handleLogout = async () => { await logout(); navigate("/login") }
+  const greeting = () => { const h = new Date().getHours(); return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening" }
 
   return (
-    <div className="dashboard-layout">
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-brand">
-          <Award size={22} color="var(--primary)" />
-          <span>CertiVerify <span style={{ fontSize: '10px', color: 'var(--primary)', border: '1px solid var(--primary)', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>DS</span></span>
-        </div>
-
-        <nav className="sidebar-menu">
-          <button className={`sidebar-item ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>
-            <LayoutDashboard size={16} />
-            <span className="sidebar-item-label">Overview</span>
-          </button>
-          <button className={`sidebar-item ${tab === 'generate' ? 'active' : ''}`} onClick={() => setTab('generate')}>
-            <UploadCloud size={16} />
-            <span className="sidebar-item-label">Generate</span>
-          </button>
-          <button className={`sidebar-item ${tab === 'certs' ? 'active' : ''}`} onClick={() => setTab('certs')}>
-            <FileText size={16} />
-            <span className="sidebar-item-label">Certificates</span>
-          </button>
-          <button className={`sidebar-item ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')}>
-            <BarChart2 size={16} />
-            <span className="sidebar-item-label">Analytics</span>
-          </button>
-          <button className={`sidebar-item ${tab === 'settings' ? 'active' : ''}`} onClick={() => setTab('settings')}>
-            <Settings size={16} />
-            <span className="sidebar-item-label">Settings</span>
-          </button>
-        </nav>
-
-        <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid var(--glass-border)' }}>
-          <button className="sidebar-item" onClick={handleLogout} style={{ color: 'rgba(239, 68, 68, 0.7)', width: '100%' }}>
-            <LogOut size={16} />
-            <span className="sidebar-item-label">Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <main className="dashboard-main">
-        <div className="dashboard__header" style={{ marginBottom: '24px' }}>
-          <div>
-            <h1 className="dashboard__greeting" style={{ fontSize: '28px' }}>
-              Hey, <span className="gradient-text">{user.name || 'Organiser'}</span> 👋
-            </h1>
-            <p className="dashboard__sub">System Role: Certified Event Issuer</p>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={fetchCertificates}>
-            <RefreshCw size={14} className={certLoading ? 'spin-icon' : ''} /> Synchronise
-          </button>
-        </div>
-
-        {tab === 'overview' && (
-          <div className="dashboard__panel animate-fade-in">
-            <div className="dashboard__stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-              <div className="ds-card glass-card" style={{ borderLeft: '4px solid var(--primary)' }}>
-                <div className="ds-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: 'var(--primary)' }}>
-                  <Award size={20} />
-                </div>
-                <div>
-                  <div className="ds-value">{stats.total}</div>
-                  <div className="ds-label">Total Issued</div>
-                </div>
+    <>
+      <Navbar />
+      <ToastContainer />
+      <div className="dashboard">
+        <aside className="sidebar">
+          <nav className="sidebar__menu">
+            {NAV.map((n) => (
+              <button key={n.id} className={"sidebar__item " + (tab === n.id ? "active" : "")} onClick={() => setTab(n.id)}>
+                {n.icon}<span>{n.label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar__divider" />
+          <button className="sidebar__item" onClick={handleLogout}><LogOut size={16} /><span>Sign out</span></button>
+        </aside>
+        <main className="dash-main">
+          {tab === "overview" && (
+            <motion.div variants={{ show: { transition: { staggerChildren: 0.07 } } }} initial="hidden" animate="show">
+              <motion.div variants={fadeUp} className="dash-header">
+                <div className="dash-title">Good {greeting()}, {user?.name?.split(" ")[0] || user?.email?.split("@")[0]}</div>
+                <div className="dash-sub">Here is what is happening with your certificates.</div>
+              </motion.div>
+              <div className="stat-row">
+                {[
+                  { label: "Certificates issued", value: stats.total, sub: "All time", accent: true },
+                  { label: "Events created", value: stats.events, sub: "All time" },
+                  { label: "Issued this month", value: stats.recent, sub: "Last 30 days" },
+                ].map((s, i) => (
+                  <motion.div key={s.label} variants={fadeUp} custom={i} className={"stat-card " + (s.accent ? "stat-card--accent" : "")}>
+                    <div className="stat-card__label">{s.label}</div>
+                    <div className="stat-card__value">{s.value}</div>
+                    <div className="stat-card__sub">{s.sub}</div>
+                  </motion.div>
+                ))}
               </div>
-              <div className="ds-card glass-card" style={{ borderLeft: '4px solid var(--secondary)' }}>
-                <div className="ds-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: 'var(--secondary)' }}>
-                  <Calendar size={20} />
+              <motion.div variants={fadeUp} custom={3} className="panel">
+                <div className="panel__head"><span className="panel__title">Quick actions</span></div>
+                <div className="panel__body" style={{ display:"flex", gap:"var(--s3)", flexWrap:"wrap" }}>
+                  <button className="btn btn-primary" onClick={() => setTab("issue")}><Upload size={15} /> Issue certificates</button>
+                  <button className="btn btn-secondary" onClick={() => setTab("certs")}><FileText size={15} /> View certificates</button>
+                  <button className="btn btn-secondary" onClick={() => navigate("/verify")}><ShieldCheck size={15} /> Verify a certificate</button>
                 </div>
-                <div>
-                  <div className="ds-value">{stats.events}</div>
-                  <div className="ds-label">Unique Events</div>
-                </div>
-              </div>
-              <div className="ds-card glass-card" style={{ borderLeft: '4px solid var(--accent)' }}>
-                <div className="ds-icon" style={{ background: 'rgba(6, 182, 212, 0.12)', color: 'var(--accent)' }}>
-                  <Users size={20} />
-                </div>
-                <div>
-                  <div className="ds-value">{stats.recent}</div>
-                  <div className="ds-label">Issued Last 7 Days</div>
-                </div>
-              </div>
-              <div className="ds-card glass-card" style={{ borderLeft: '4px solid var(--warning)' }}>
-                <div className="ds-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: 'var(--warning)' }}>
-                  <AlertCircle size={20} />
-                </div>
-                <div>
-                  <div className="ds-value">{stats.expired}</div>
-                  <div className="ds-label">Expired Certs</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginTop: '10px' }}>
-              <div className="panel-section glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '700' }}>Platform Health Status</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px' }}>
-                    <span>In-memory Cache (sub-2s lookup)</span>
-                    <span style={{ color: 'var(--secondary)', fontWeight: 'bold' }}>Active</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px' }}>
-                    <span>ML-Optimised Duplicate Guard</span>
-                    <span style={{ color: 'var(--secondary)', fontWeight: 'bold' }}>Deterministic Pandas clean</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px' }}>
-                    <span>Cloud Storage Integration</span>
-                    <span style={{ color: 'var(--secondary)', fontWeight: 'bold' }}>Firebase Firestore Online</span>
+              </motion.div>
+            </motion.div>
+          )}
+          {tab === "issue" && (
+            <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+              <div className="dash-header"><div className="dash-title">Issue certificates</div><div className="dash-sub">Fill in event details and upload a recipient CSV.</div></div>
+              <div className="panel">
+                <div className="panel__head"><span className="panel__title">Event details</span></div>
+                <div className="panel__body">
+                  <div className="form-grid">
+                    <div className="field"><label className="field-label">Event name</label><input className="input" placeholder="e.g. Annual Tech Symposium" value={form.eventName} onChange={set("eventName")} /></div>
+                    <div className="field"><label className="field-label">Event date</label><input type="date" className="input" value={form.eventDate} onChange={set("eventDate")} /></div>
+                    <div className="field"><label className="field-label">Issued by</label><input className="input" placeholder="Organisation or person" value={form.issuedBy} onChange={set("issuedBy")} /></div>
                   </div>
                 </div>
               </div>
-              <div className="panel-section glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                <Sparkles size={36} color="var(--primary)" className="animate-pulse" />
-                <h4 style={{ fontWeight: '700' }}>Need to generate?</h4>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Upload a CSV list and configure event details.</p>
-                <button className="btn btn-primary btn-sm w-full" onClick={() => setTab('generate')}>
-                  Start Pipeline
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'generate' && (
-          <div className="dashboard__panel animate-fade-in">
-            <div className="panel-section glass-card">
-              <h2 className="panel-title">1. Event Metadata Configuration</h2>
-              <div className="event-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                <div className="form-group">
-                  <label className="label">Event Name</label>
-                  <input
-                    className="input-glass"
-                    placeholder="e.g. Kaggle Datathon 2026"
-                    value={eventDetails.event_name}
-                    onChange={e => setEventDetails({ ...eventDetails, event_name: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Event Date</label>
-                  <input
-                    type="date"
-                    className="input-glass"
-                    value={eventDetails.event_date}
-                    onChange={e => setEventDetails({ ...eventDetails, event_date: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Organisation</label>
-                  <input
-                    className="input-glass"
-                    placeholder="e.g. VTU Data Science Club"
-                    value={eventDetails.organisation}
-                    onChange={e => setEventDetails({ ...eventDetails, organisation: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="label">Expiry Date (Optional)</label>
-                  <input
-                    type="date"
-                    className="input-glass"
-                    value={eventDetails.expiry_date}
-                    onChange={e => setEventDetails({ ...eventDetails, expiry_date: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="panel-section glass-card">
-              <h2 className="panel-title">2. Upload CSV Data Source</h2>
-              <p className="panel-sub">CSV fields must map directly to: <code>name</code>, <code>email</code>, <code>role</code></p>
-
-              <div
-                className={`drop-zone ${dragOver ? 'drag-over' : ''} ${csvFile ? 'has-file' : ''}`}
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                onClick={() => fileRef.current?.click()}
-                style={{ padding: '30px' }}
-              >
-                <input ref={fileRef} type="file" accept=".csv" hidden onChange={e => handleFile(e.target.files[0])} />
-                {csvFile ? (
-                  <div className="drop-zone__file">
-                    <FileText size={32} color="var(--primary)" />
-                    <div>
-                      <div className="dz-filename">{csvFile.name}</div>
-                      <div className="dz-size">{(csvFile.size / 1024).toFixed(1)} KB</div>
+              <div className="panel">
+                <div className="panel__head"><span className="panel__title">Recipient CSV</span></div>
+                <div className="panel__body">
+                  <input type="file" accept=".csv" ref={fileRef} style={{ display:"none" }} onChange={(e) => handleFile(e.target.files[0])} />
+                  <div className={"dropzone " + (dragging ? "drag-over " : "") + (file ? "has-file" : "")}
+                    onClick={() => fileRef.current.click()}
+                    onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                    onDragLeave={() => setDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]) }}>
+                    {file ? (
+                      <div style={{ display:"flex", alignItems:"center", gap:12, justifyContent:"center" }}>
+                        <CheckCircle size={20} color="var(--success)" />
+                        <span style={{ fontFamily:"var(--font-mono)", fontSize:13 }}>{file.name}</span>
+                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); setFile(null); setPreview([]) }}><X size={13} /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <CloudUpload size={32} className="dropzone__icon" />
+                        <p className="dropzone__label">Drop CSV here or <span className="dropzone__link">browse</span></p>
+                        <p style={{ fontSize:12, color:"var(--text-subtle)", marginTop:4 }}>Columns: name, email, role (optional)</p>
+                      </>
+                    )}
+                  </div>
+                  {preview.length > 0 && (
+                    <div style={{ marginTop:"var(--s4)" }}>
+                      <p className="label-mono" style={{ marginBottom:8 }}>Preview</p>
+                      <div className="table-wrap"><table className="table">
+                        <thead><tr>{preview[0].map((h, i) => <th key={i}>{h.trim()}</th>)}</tr></thead>
+                        <tbody>{preview.slice(1).map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell.trim()}</td>)}</tr>)}</tbody>
+                      </table></div>
                     </div>
-                    <button className="btn-icon" onClick={e => { e.stopPropagation(); setCsvFile(null); setCsvPreview([]); }}>
-                      <Trash2 size={15} />
+                  )}
+                  {issuing && (
+                    <div style={{ marginTop:"var(--s4)" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"var(--text-muted)", marginBottom:6 }}>
+                        <span>Issuing certificates...</span><span>{progress}%</span>
+                      </div>
+                      <div className="progress-track"><div className="progress-fill" style={{ width:`${progress}%` }} /></div>
+                    </div>
+                  )}
+                  <div style={{ marginTop:"var(--s5)", display:"flex", gap:"var(--s3)" }}>
+                    <button className="btn btn-primary" onClick={handleIssue} disabled={issuing}>
+                      {issuing ? <><Loader2 size={14} className="spin" /> Issuing...</> : <><Upload size={14} /> Issue certificates</>}
                     </button>
-                  </div>
-                ) : (
-                  <div className="drop-zone__empty">
-                    <UploadCloud size={32} color="rgba(255,255,255,0.4)" />
-                    <p>Drag CSV file here or <span className="dz-browse">browse files</span></p>
-                  </div>
-                )}
-              </div>
-
-              {csvPreview.headers && csvPreview.headers.length > 0 && (
-                <div className="csv-preview">
-                  <p className="preview-label">Data Preview (Max 5 rows)</p>
-                  <div className="table-wrapper">
-                    <table className="preview-table">
-                      <thead>
-                        <tr>{csvPreview.headers.map((h, i) => <th key={i}>{h.trim()}</th>)}</tr>
-                      </thead>
-                      <tbody>
-                        {csvPreview.rows.map((row, i) => (
-                          <tr key={i}>{row.map((cell, j) => <td key={j}>{cell.trim()}</td>)}</tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <button className="btn btn-secondary" onClick={() => { setFile(null); setPreview([]); setForm({ eventName:"", eventDate:"", issuedBy:"" }) }}>Clear</button>
                   </div>
                 </div>
-              )}
-
-              {uploadStatus === 'error' && (
-                <div className="alert alert-error"><AlertCircle size={16} /> {uploadMsg}</div>
-              )}
-              {uploadStatus === 'success' && (
-                <div className="alert alert-success"><CheckCircle size={16} /> {uploadMsg}</div>
-              )}
-
-              <div className="panel-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleUploadCSV}
-                  disabled={!csvFile || uploadStatus === 'loading'}
-                >
-                  {uploadStatus === 'loading'
-                    ? <><span className="spinner-dark" /> Uploading...</>
-                    : <><UploadCloud size={16} /> Pre-validate & Parse</>}
-                </button>
-
-                {uploadStatus === 'success' && (
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleGenerate}
-                    disabled={genStatus === 'loading'}
-                  >
-                    {genStatus === 'loading'
-                      ? <><span className="spinner" /> Executing Pipeline...</>
-                      : <><Play size={16} /> Execute Certificate Generation</>}
-                  </button>
-                )}
               </div>
-
-              {genStatus === 'loading' && (
-                <div className="progress-bar-wrapper">
-                  <div className="progress-bar" style={{ width: `${genProgress}%` }} />
-                  <p>Generating certificates... {genProgress}%</p>
-                </div>
-              )}
-
-              {genStatus === 'error' && (
-                <div className="alert alert-error"><AlertCircle size={16} /> {genMsg}</div>
-              )}
-              {genStatus === 'success' && (
-                <div className="alert alert-success"><CheckCircle size={16} /> {genMsg}</div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {tab === 'certs' && (
-          <div className="dashboard__panel animate-fade-in">
-            <div className="panel-section glass-card">
-              <div className="certs-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <h2 className="panel-title" style={{ margin: 0 }}>Certificate Records Database</h2>
-                  <span className="badge badge-primary">{filteredCerts.length} / {certificates.length} records</span>
-                </div>
-                <button className="btn btn-secondary btn-sm" onClick={exportToCSV} disabled={certificates.length === 0}>
-                  <FileSpreadsheet size={14} /> Export CSV
-                </button>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <div className="verify__input-wrapper" style={{ margin: 0, position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Search size={16} className="input-icon" />
-                  <input
-                    type="text"
-                    className="input-glass input-with-icon"
-                    placeholder="Search by name, email, event or cert ID..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {certLoading ? (
-                <div className="loading-state">
-                  <div className="loading-spinner" /> Loading active data registries...
-                </div>
-              ) : filteredCerts.length === 0 ? (
-                <div className="empty-state">
-                  <Database size={48} style={{ opacity: 0.3, marginBottom: '12px' }} />
-                  <p>No records matched search or no certificates have been issued.</p>
-                </div>
-              ) : (
-                <div className="table-wrapper">
-                  <table className="certs-table">
-                    <thead>
-                      <tr>
-                        <th>Recipient Details</th>
-                        <th>Event Target</th>
-                        <th>Issuing Org</th>
-                        <th>Cert ID</th>
-                        <th>Issued Date</th>
-                        <th>Security Status</th>
-                        <th style={{ textAlign: 'right' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredCerts.map((cert, i) => {
-                        const statusObj = getExpiryLabel(cert.expiry_date);
-                        return (
-                          <tr key={i} className="table-row">
-                            <td>
-                              <div className="cert-name">{cert.name}</div>
-                              <div className="cert-email" style={{ fontSize: '11px' }}>{cert.email}</div>
-                            </td>
-                            <td>
-                              {cert.event_name}
-                              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                                Role: {cert.role}
-                              </div>
-                            </td>
-                            <td>{cert.organisation || '—'}</td>
-                            <td><code className="cert-id" style={{ fontSize: '11px' }}>{cert.cert_id}</code></td>
-                            <td>{new Date(cert.created_at).toLocaleDateString()}</td>
-                            <td>
-                              <span className={`badge ${statusObj.class}`} style={{ padding: '2px 8px', fontSize: '10px' }}>
-                                {statusObj.text}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <div className="cert-actions" style={{ justifyContent: 'flex-end' }}>
-                                <button
-                                  className="btn-icon"
-                                  title="Open Preview Portal"
-                                  onClick={() => navigate(`/certificate/${cert.cert_id}`)}
-                                >
-                                  <Eye size={14} />
-                                </button>
-                                <button
-                                  className="btn-icon"
-                                  title={copiedId === cert.cert_id ? 'Copied!' : 'Copy Verify Link'}
-                                  onClick={() => copyVerifyLink(cert.cert_id)}
-                                >
-                                  {copiedId === cert.cert_id
-                                    ? <CheckCircle size={14} color="#10b981" />
-                                    : <Copy size={14} />}
-                                </button>
-                                <a
-                                  className="btn-icon"
-                                  title="Download Original PDF"
-                                  href={`${import.meta.env.VITE_API_BASE_URL}/certificates/download/${cert.cert_id}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  <Download size={14} />
-                                </a>
-                              </div>
-                            </td>
+            </motion.div>
+          )}
+          {tab === "certs" && (
+            <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.35 }}>
+              <div className="dash-header"><div className="dash-title">Certificates</div><div className="dash-sub">All issued certificates.</div></div>
+              <div className="panel">
+                <div className="panel__body" style={{ padding:0 }}>
+                  {certsLoading ? (
+                    <div style={{ display:"flex", alignItems:"center", gap:10, padding:"var(--s8)", color:"var(--text-muted)", justifyContent:"center" }}><Loader2 size={18} className="spin" /> Loading...</div>
+                  ) : certs.length === 0 ? (
+                    <div style={{ textAlign:"center", padding:"var(--s10)", color:"var(--text-muted)" }}>
+                      <FileText size={32} style={{ margin:"0 auto 10px", color:"var(--text-subtle)" }} />
+                      <p style={{ fontSize:14 }}>No certificates issued yet.</p>
+                      <button className="btn btn-primary btn-sm" style={{ marginTop:12 }} onClick={() => setTab("issue")}>Issue your first batch</button>
+                    </div>
+                  ) : (
+                    <div className="table-wrap" style={{ borderRadius:"var(--r-lg)" }}>
+                      <table className="table">
+                        <thead><tr><th>Recipient</th><th>Event</th><th>Issued</th><th>Certificate ID</th><th></th></tr></thead>
+                        <tbody>{certs.map((c) => (
+                          <tr key={c.cert_id}>
+                            <td><div style={{ fontWeight:500 }}>{c.name || c.recipient_name}</div><div style={{ fontSize:12, color:"var(--text-muted)", fontFamily:"var(--font-mono)" }}>{c.email}</div></td>
+                            <td>{c.event_name}</td>
+                            <td style={{ fontSize:13, color:"var(--text-muted)" }}>{c.event_date || c.issued_date || c.created_at}</td>
+                            <td><span className="cert-id">{c.cert_id}</span></td>
+                            <td>{c.cert_id && <a href={`${(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')}/certificates/download/${c.cert_id}`} className="btn btn-icon" target="_blank" rel="noopener noreferrer"><Download size={13} /></a>}</td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {tab === 'analytics' && (
-          <div className="dashboard__panel animate-fade-in">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
-              <div className="panel-section glass-card" style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Certificates Issued per Event</h3>
-                {certificates.length === 0 ? (
-                  <div style={{ margin: 'auto', color: 'rgba(255,255,255,0.3)' }}>No data registry available</div>
-                ) : (
-                  <div style={{ flexGrow: 1, width: '100%', height: '90%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={getEventData()} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" style={{ fontSize: '11px' }} />
-                        <YAxis stroke="rgba(255,255,255,0.5)" style={{ fontSize: '11px' }} />
-                        <Tooltip contentStyle={{ background: '#080b14', border: '1px solid var(--glass-border)', color: 'white' }} />
-                        <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-
-              <div className="panel-section glass-card" style={{ height: '350px', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Recipient Role Breakdown</h3>
-                {certificates.length === 0 ? (
-                  <div style={{ margin: 'auto', color: 'rgba(255,255,255,0.3)' }}>No data registry available</div>
-                ) : (
-                  <div style={{ flexGrow: 1, width: '100%', height: '90%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: '60%', height: '100%' }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={getRoleData()}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                          >
-                            {getRoleData().map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip contentStyle={{ background: '#080b14', border: '1px solid var(--glass-border)', color: 'white' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                        ))}</tbody>
+                      </table>
                     </div>
-
-                    <div style={{ width: '40%', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
-                      {getRoleData().map((entry, index) => (
-                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length] }} />
-                          <span style={{ color: 'rgba(255,255,255,0.7)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {entry.name}: {entry.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="panel-section glass-card" style={{ height: '350px', display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Certificates Registry Trend Over Time</h3>
-                {certificates.length === 0 ? (
-                  <div style={{ margin: 'auto', color: 'rgba(255,255,255,0.3)' }}>No data registry available</div>
-                ) : (
-                  <div style={{ flexGrow: 1, width: '100%', height: '90%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={getTimelineData()} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" style={{ fontSize: '11px' }} />
-                        <YAxis stroke="rgba(255,255,255,0.5)" style={{ fontSize: '11px' }} />
-                        <Tooltip contentStyle={{ background: '#080b14', border: '1px solid var(--glass-border)', color: 'white' }} />
-                        <Line type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={3} dot={{ fill: 'var(--primary-light)', r: 4 }} activeDot={{ r: 6 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="panel-section glass-card" style={{ marginTop: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '14px' }}>Summary Analytical Insights</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Avg Recipient Count / Event</div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px' }}>
-                    {stats.events > 0 ? (stats.total / stats.events).toFixed(1) : 0}
-                  </div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Active Registry Health</div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: 'var(--secondary)' }}>
-                    {stats.total > 0 ? ((stats.total - stats.expired) / stats.total * 100).toFixed(0) : 0}% Active
-                  </div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Unique Event Hosts</div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px' }}>
-                    {new Set(certificates.map(c => c.organisation || 'default')).size}
-                  </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {tab === 'settings' && (
-          <div className="dashboard__panel animate-fade-in">
-            <div className="panel-section glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <h2 className="panel-title" style={{ margin: 0 }}>Account Settings & Profile</h2>
-
-              <div className="event-form" style={{ gridTemplateColumns: '1fr', gap: '16px', maxWidth: '500px' }}>
-                <div className="form-group">
-                  <label className="label">Registered Email</label>
-                  <input className="input-glass" value={user.email || ''} disabled style={{ opacity: 0.6 }} />
-                </div>
-                <div className="form-group">
-                  <label className="label">Issuer Name</label>
-                  <input className="input-glass" value={user.name || ''} disabled style={{ opacity: 0.6 }} />
-                </div>
-                <div className="form-group">
-                  <label className="label">Firestore Namespace</label>
-                  <code style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '6px', display: 'block', fontSize: '12px' }}>
-                    /certificates
-                  </code>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
-                <button className="btn btn-secondary" onClick={handleLogout}>
-                  <LogOut size={16} /> Sign Out Account
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
+            </motion.div>
+          )}
+        </main>
+      </div>
+    </>
+  )
 }

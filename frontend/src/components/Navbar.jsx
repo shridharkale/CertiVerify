@@ -1,115 +1,68 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Menu, X, LogOut, LayoutDashboard, Home, Search } from 'lucide-react';
-import './Navbar.css';
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useAuth } from '../utils/auth'
+import { LogOut, ShieldCheck } from 'lucide-react'
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const isLoggedIn = !!localStorage.getItem('cv_token');
+  const { user, logout } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const isActive = (path) => location.pathname === path
 
-  const handleLogout = () => {
-    localStorage.removeItem('cv_token');
-    localStorage.removeItem('cv_user');
-    navigate('/');
-  };
-
-  const isActive = (path) => location.pathname === path;
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
   return (
-    <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
-      <div className="navbar__inner">
-        
-        <Link to="/" className="navbar__logo">
-          <div className="logo-icon">
-            <Shield size={18} strokeWidth={2.5} />
-          </div>
-          <span className="logo-text">
-            Certi<span className="gradient-text">Verify</span>
-          </span>
+    <motion.nav
+      className="nav"
+      initial={{ y: -60, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      <div className="nav__inner">
+        <Link to="/" className="nav__brand">
+          <ShieldCheck size={18} strokeWidth={2.5} style={{ color: 'var(--primary)' }} />
+          CertiVerify
         </Link>
 
-        
-        <div className="navbar__links">
-          <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>
-            <Home size={15} />
-            Home
-          </Link>
-          <Link to="/verify" className={`nav-link ${isActive('/verify') ? 'active' : ''}`}>
-            <Search size={15} />
+        <div className="nav__links">
+          <Link to="/verify" className={`nav__link ${isActive('/verify') ? 'active' : ''}`}>
             Verify
           </Link>
-          {isLoggedIn && (
-            <Link to="/dashboard" className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}>
-              <LayoutDashboard size={15} />
-              Dashboard
-            </Link>
+          {user && (
+            <>
+              <Link to="/dashboard" className={`nav__link ${isActive('/dashboard') ? 'active' : ''}`}>
+                Dashboard
+              </Link>
+              <Link to="/gallery" className={`nav__link ${isActive('/gallery') ? 'active' : ''}`}>
+                Events
+              </Link>
+            </>
           )}
         </div>
 
-        
-        <div className="navbar__actions">
-          {isLoggedIn ? (
+        <div className="nav__actions">
+          {user ? (
             <>
-              <span className="nav-user">
-                {JSON.parse(localStorage.getItem('cv_user') || '{}').email?.split('@')[0] || 'Organiser'}
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                {user.email?.split('@')[0]}
               </span>
-              <button className="btn btn-sm btn-ghost" onClick={handleLogout}>
-                <LogOut size={14} />
-                Logout
+              <button className="btn btn-ghost btn-sm" onClick={handleLogout}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <LogOut size={14} /> Sign out
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn btn-sm btn-ghost">
-                Sign In
-              </Link>
-              <Link to="/register" className="btn btn-sm btn-primary">
-                Get Started
-              </Link>
+              <Link to="/login" className="btn btn-ghost btn-sm">Sign in</Link>
+              <Link to="/register" className="btn btn-primary btn-sm">Get started</Link>
             </>
           )}
         </div>
-
-        
-        <button
-          className="btn-icon navbar__hamburger"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
       </div>
-
-      
-      {menuOpen && (
-        <div className="navbar__mobile">
-          <Link to="/" className="mobile-link" onClick={() => setMenuOpen(false)}><Home size={16} /> Home</Link>
-          <Link to="/verify" className="mobile-link" onClick={() => setMenuOpen(false)}><Search size={16} /> Verify Certificate</Link>
-          {isLoggedIn && (
-            <Link to="/dashboard" className="mobile-link" onClick={() => setMenuOpen(false)}><LayoutDashboard size={16} /> Dashboard</Link>
-          )}
-          <div className="divider" />
-          {isLoggedIn ? (
-            <button className="mobile-link" onClick={() => { handleLogout(); setMenuOpen(false); }}>
-              <LogOut size={16} /> Logout
-            </button>
-          ) : (
-            <>
-              <Link to="/login" className="mobile-link" onClick={() => setMenuOpen(false)}>Sign In</Link>
-              <Link to="/register" className="btn btn-primary w-full" onClick={() => setMenuOpen(false)}>Get Started</Link>
-            </>
-          )}
-        </div>
-      )}
-    </nav>
-  );
+    </motion.nav>
+  )
 }

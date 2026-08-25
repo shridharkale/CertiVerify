@@ -4,9 +4,8 @@ load_dotenv()
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
+from extensions import limiter
 from routes.auth import auth_bp
 from routes.certificates import certificates_bp
 from routes.verify import verify_bp
@@ -18,6 +17,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 CORS(app,
     origins=[
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "https://shridharkale.github.io",
     ],
     expose_headers=["Content-Disposition"],
@@ -25,12 +25,7 @@ CORS(app,
 )
 
 # ── RATE LIMITING ──────────────────────────────────────────────────────────────
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["300 per day", "60 per hour"],
-    storage_uri="memory://"
-)
+limiter.init_app(app)
 
 # ── SECURITY HEADERS ───────────────────────────────────────────────────────────
 @app.after_request

@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Shield, Download, ExternalLink, ArrowLeft, CheckCircle, Calendar, User, Award, Hash, Loader, Copy, Printer } from 'lucide-react';
 import api from '../utils/api';
-import './CertificatePreview.css';
 
 export default function CertificatePreview() {
-  const { cert_id } = useParams();
+  const { certId } = useParams();
   const navigate = useNavigate();
   const [certificate, setCertificate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,16 +14,20 @@ export default function CertificatePreview() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await api.get(`/verify/${cert_id}`);
-        setCertificate(res.data.certificate);
+        const res = await api.get(`/verify/${certId}`);
+        setCertificate(res.data.certificate || res.data.data);
       } catch {
         setError('Certificate not found.');
       } finally {
         setLoading(false);
       }
     };
-    load();
-  }, [cert_id]);
+    if (certId) load();
+    else {
+      setLoading(false);
+      setError('Certificate not found.');
+    }
+  }, [certId]);
 
   const handleCopyLink = async () => {
     try {
@@ -40,8 +43,8 @@ export default function CertificatePreview() {
     window.print();
   };
 
-  const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/certificates/download/${cert_id}`;
-  const verifyUrl = `${window.location.origin}/CertiVerify/#/verify/${cert_id}`;
+  const downloadUrl = `${(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')}/certificates/download/${certId}`;
+  const verifyUrl = `${window.location.origin}${import.meta.env.BASE_URL}#/verify/${certId}`;
 
   if (loading) return (
     <div className="preview__loading">
@@ -66,7 +69,7 @@ export default function CertificatePreview() {
           <ArrowLeft size={14} /> Back
         </button>
         <div className="preview__toolbar-actions">
-          <Link to={`/verify/${cert_id}`} className="btn btn-secondary btn-sm">
+          <Link to={`/verify/${certId}`} className="btn btn-secondary btn-sm">
             <ExternalLink size={14} /> Public Link
           </Link>
           <a href={downloadUrl} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm">

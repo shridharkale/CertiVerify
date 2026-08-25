@@ -15,7 +15,7 @@ import pandas as pd
 from utils.qr_generator import generate_qr
 from utils.cert_generator import generate_certificate
 from firebase_config import db, auth
-from app import limiter
+from extensions import limiter
 
 
 # Removed LLM duplicate checker imports as per instructions
@@ -38,9 +38,8 @@ def get_verified_email(req):
 
 
 def generate_cert_id(event_name=""):
-    # Replace wherever cert ID is generated — 6 hex chars = 16.7M keyspace
-    cert_id = f"CERT-{event_name[:8].upper()}-{secrets.token_hex(3).upper()}"
-    return cert_id
+    slug = re.sub(r"[^A-Za-z0-9]", "", event_name or "")[:8].upper() or "EVENT"
+    return f"CERT-{slug}-{secrets.token_hex(3).upper()}"
 
 
 def smart_duplicate_check(participants, event_name, db):
@@ -83,6 +82,143 @@ def smart_duplicate_check(participants, event_name, db):
     return clean, batch_dups + already_certified
 
 
+def _parse_participants_csv(file):
+    file.stream.seek(0)
+    df = pd.read_csv(io.BytesIO(file.read()))
+    df.columns = df.columns.str.strip().str.lower()
+    required_columns = {"name", "email"}
+    if not required_columns.issubset(set(df.columns)):
+        missing = required_columns - set(df.columns)
+        raise ValueError(f"Missing columns: {', '.join(sorted(missing))}")
+
+    df["name"] = df["name"].astype(str).str.strip()
+    df["email"] = df["email"].astype(str).str.strip().str.lower()
+    if "role" in df.columns:
+        df["role"] = df["role"].astype(str).str.strip()
+    else:
+        df["role"] = "Participant"
+
+    is_duplicate = df.duplicated(subset=["name", "email"], keep="first")
+    participants = df[~is_duplicate].to_dict(orient="records")
+    duplicates = df[is_duplicate].to_dict(orient="records")
+    return participants, duplicates
+
+
+def _issue_certificates(issuer, event_name, event_date, organisation, participants, expiry_date=None):
+    clean_participants, duplicates = smart_duplicate_check(
+        participants, event_name, db
+    )
+
+    expiry_timestamp = None
+    if expiry_date:
+        try:
+            if isinstance(expiry_date, (int, float)):
+                expiry_timestamp = int(expiry_date)
+            else:
+                dt = datetime.strptime(str(expiry_date).split("T")[0], "%Y-%m-%d")
+                expiry_timestamp = int(dt.timestamp())
+        except Exception:
+            expiry_timestamp = None
+
+    generated_count = 0
+    errors = []
+
+    for index, person in enumerate(clean_participants):
+        try:
+            name = str(person.get("name", "")).strip()
+            email = str(person.get("email", "")).strip().lower()
+            role = str(person.get("role", "Participant")).strip() or "Participant"
+
+            if not name or not email:
+                errors.append({"index": index, "reason": "Missing name or email", "data": person})
+                continue
+
+            cert_id = generate_cert_id(event_name)
+            qr_path = generate_qr(cert_id=cert_id)
+
+            generate_certificate(
+                name=name.title(),
+                event=event_name,
+                date=event_date,
+                cert_id=cert_id,
+                logo_path="assets/logo.png",
+                qr_path=qr_path,
+                role=role,
+                organisation=organisation,
+            )
+
+            cert_data = {
+                "cert_id": cert_id,
+                "name": name.title(),
+                "email": email,
+                "role": role,
+                "event_name": event_name,
+                "event_date": event_date,
+                "organisation": organisation,
+                "created_at": datetime.utcnow().isoformat() + "Z",
+                "verified": False,
+                "issued_by": issuer,
+            }
+            if expiry_timestamp is not None:
+                cert_data["expiry_date"] = expiry_timestamp
+
+            db.collection("certificates").document(cert_id).set(cert_data)
+            generated_count += 1
+        except Exception as e:
+            print(f"[GENERATE ERROR index={index}] {type(e).__name__}: {e}", flush=True)
+            errors.append({"index": index, "reason": str(e), "data": person})
+
+    response = {
+        "message": "Certificates generated successfully",
+        "count": generated_count,
+        "skipped": len(duplicates),
+        "skip_reasons": duplicates,
+    }
+    if errors:
+        response["warnings"] = errors
+    return response
+
+
+@certificates_bp.route("/issue", methods=["POST"])
+def issue_certificates():
+    issuer = get_verified_email(request)
+    if not issuer:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded."}), 400
+
+    file = request.files["file"]
+    if not file or file.filename == "":
+        return jsonify({"error": "No filename."}), 400
+
+    event_name = (request.form.get("event_name") or "").strip()
+    event_date = (request.form.get("event_date") or "").strip()
+    organisation = (
+        request.form.get("organisation") or request.form.get("issued_by") or ""
+    ).strip()
+    expiry_date = request.form.get("expiry_date")
+
+    if not event_name:
+        return jsonify({"error": "'event_name' is required."}), 400
+    if not event_date:
+        return jsonify({"error": "'event_date' is required."}), 400
+
+    try:
+        participants, _csv_dups = _parse_participants_csv(file)
+    except Exception as e:
+        return jsonify({"error": f"Failed to read CSV: {str(e)}"}), 422
+
+    if not participants:
+        return jsonify({"error": "CSV has no valid recipient rows."}), 422
+    if len(participants) > 2000:
+        return jsonify({"error": "Batch too large. Maximum 2000 rows per request."}), 422
+
+    return jsonify(_issue_certificates(
+        issuer, event_name, event_date, organisation, participants, expiry_date
+    )), 200
+
+
 @certificates_bp.route("/upload-csv", methods=["POST"])
 def upload_csv():
     issuer = get_verified_email(request)
@@ -97,24 +233,9 @@ def upload_csv():
         return jsonify({"error": "No filename."}), 400
 
     try:
-        file.stream.seek(0)
-        df = pd.read_csv(io.BytesIO(file.read()))
-        df.columns = df.columns.str.strip().str.lower()
+        participants, duplicates = _parse_participants_csv(file)
     except Exception as e:
         return jsonify({"error": f"Failed to read CSV: {str(e)}"}), 422
-
-    required_columns = {"name", "email", "role"}
-    if not required_columns.issubset(set(df.columns)):
-        missing = required_columns - set(df.columns)
-        return jsonify({"error": f"Missing columns: {missing}"}), 422
-
-    df["name"]  = df["name"].astype(str).str.strip().str.lower()
-    df["email"] = df["email"].astype(str).str.strip().str.lower()
-    df["role"]  = df["role"].astype(str).str.strip()
-
-    is_duplicate = df.duplicated(subset=["name", "email"], keep="first")
-    participants = df[~is_duplicate].to_dict(orient="records")
-    duplicates   = df[is_duplicate].to_dict(orient="records")
 
     event_name = request.form.get("event_name", "default")
     temp_key = f"{issuer}__{event_name}"
@@ -122,10 +243,12 @@ def upload_csv():
 
     return jsonify({
         "participants": participants,
-        "duplicates":   duplicates,
-        "upload_id":    event_name,
-        "total_rows":   len(participants),
+        "duplicates": duplicates,
+        "upload_id": event_name,
+        "total_rows": len(participants),
     }), 200
+
+
 @certificates_bp.route("/generate", methods=["POST"])
 def generate_certificates():
     issuer = get_verified_email(request)
@@ -136,11 +259,11 @@ def generate_certificates():
     if not data:
         return jsonify({"error": "Invalid JSON body"}), 400
 
-    event_name   = data.get("event_name", "").strip()
-    event_date   = data.get("event_date", "").strip()
-    organisation = data.get("organisation", "").strip()
+    event_name = (data.get("event_name") or "").strip()
+    event_date = (data.get("event_date") or "").strip()
+    organisation = (data.get("organisation") or "").strip()
     participants = data.get("participants") or []
-    expiry_date  = data.get("expiry_date") # optional field
+    expiry_date = data.get("expiry_date")
 
     if not event_name:
         return jsonify({"error": "'event_name' is required."}), 400
@@ -148,94 +271,16 @@ def generate_certificates():
         return jsonify({"error": "'event_date' is required."}), 400
     if not participants or not isinstance(participants, list):
         return jsonify({"error": "'participants' must be a non-empty list."}), 400
-    
-    # Add CSV row cap
-    MAX_ROWS = 2000
-    if len(participants) > MAX_ROWS:
-        return jsonify({"error": f"Batch too large. Maximum {MAX_ROWS} rows per request."}), 422
+    if len(participants) > 2000:
+        return jsonify({"error": "Batch too large. Maximum 2000 rows per request."}), 422
 
-    # Smart Duplicate Check
-    clean_participants, duplicates = smart_duplicate_check(
-        participants, event_name, db
-    )
-
-    # Parse optional expiry_date to Unix timestamp
-    expiry_timestamp = None
-    if expiry_date:
-        try:
-            if isinstance(expiry_date, (int, float)):
-                expiry_timestamp = int(expiry_date)
-            else:
-                # Expecting YYYY-MM-DD
-                dt = datetime.strptime(str(expiry_date).split('T')[0], "%Y-%m-%d")
-                expiry_timestamp = int(dt.timestamp())
-        except Exception:
-            expiry_timestamp = None
-
-    logo_path       = "assets/logo.png"
-    generated_count = 0
-    errors          = []
-
-    for index, person in enumerate(clean_participants):
-        try:
-            name  = str(person.get("name", "")).strip()
-            email = str(person.get("email", "")).strip().lower()
-            role  = str(person.get("role", "Participant")).strip()
-
-            if not name or not email:
-                errors.append({"index": index, "reason": "Missing name or email", "data": person})
-                continue
-
-            cert_id = generate_cert_id(event_name)
-            qr_path = generate_qr(cert_id=cert_id)
-
-            generate_certificate(
-                name=name.title(),
-                event=event_name,
-                date=event_date,
-                cert_id=cert_id,
-                logo_path=logo_path,
-                qr_path=qr_path,
-                role=role,
-                organisation=organisation,
-            )
-
-            cert_data = {
-                "cert_id":      cert_id,
-                "name":         name.title(),
-                "email":        email,
-                "role":         role,
-                "event_name":   event_name,
-                "event_date":   event_date,
-                "organisation": organisation,
-                "created_at":   datetime.utcnow().isoformat() + "Z",
-                "verified":     False,
-                "issued_by":    issuer,
-            }
-
-            if expiry_timestamp is not None:
-                cert_data["expiry_date"] = expiry_timestamp
-
-            db.collection("certificates").document(cert_id).set(cert_data)
-            generated_count += 1
-
-        except Exception as e:
-            print(f"[GENERATE ERROR index={index}] {type(e).__name__}: {e}", flush=True)
-            errors.append({"index": index, "reason": str(e), "data": person})
-            continue
-
-    response = {
-        "message": "Certificates generated successfully",
-        "count": generated_count,
-        "skipped": len(duplicates),
-        "skip_reasons": duplicates
-    }
-    if errors:
-        response["warnings"] = errors
-
-    return jsonify(response), 200
+    return jsonify(_issue_certificates(
+        issuer, event_name, event_date, organisation, participants, expiry_date
+    )), 200
 
 
+@certificates_bp.route("", methods=["GET"])
+@certificates_bp.route("/", methods=["GET"])
 @certificates_bp.route("/list", methods=["GET"])
 def list_certificates():
     user_email = get_verified_email(request)

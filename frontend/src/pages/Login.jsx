@@ -1,126 +1,88 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
-import api from '../utils/api';
-import './Auth.css';
+﻿import { useState } from "react"
+import { Link, Navigate, useNavigate } from "react-router-dom"
+import { motion } from "framer-motion"
+import { ShieldCheck, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { useAuth } from "../utils/auth"
+import { useToast } from "../utils/useToast"
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function Login() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const { login, user } = useAuth()
+  const { showToast, ToastContainer } = useToast()
+  const navigate = useNavigate()
+  const [form, setForm] = useState({ email: "", password: "" })
+  const [showPw, setShowPw] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState({})
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  useEffect(() => {
-    document.title = 'Sign In — CertiVerify';
-  }, []);
+  if (user) return <Navigate to="/dashboard" replace />
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError('');
-  };
+  const validate = () => {
+    const e = {}
+    const email = form.email.trim()
+    if (!email) e.email = "Email is required"
+    else if (!EMAIL_RE.test(email)) e.email = "Enter a valid email"
+    if (!form.password) e.password = "Password is required"
+    return e
+  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  const handleSubmit = async (ev) => {
+    ev?.preventDefault()
+    const e = validate()
+    if (Object.keys(e).length) { setErrors(e); return }
+    setErrors({})
+    setLoading(true)
     try {
-      const res = await api.post('/auth/login', form);
-      localStorage.setItem('cv_token', res.data.token);
-      localStorage.setItem('cv_user', JSON.stringify(res.data.user));
-      navigate('/dashboard');
+      await login(form.email.trim(), form.password)
+      navigate("/dashboard")
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.message || 'Invalid credentials. Please try again.');
+      showToast(err.message || "Sign in failed", "error")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="auth__page">
-      
-      <div className="auth__left">
-        <div className="auth__left-logo">
-          <div className="logo-icon">
-            <Shield size={22} strokeWidth={2.5}/>
+    <div className="auth-page">
+      <ToastContainer />
+      <motion.div className="auth-card" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div className="auth-card__logo">
+          <div style={{ width:44,height:44,borderRadius:"var(--r-md)",background:"var(--primary-soft)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",color:"var(--primary)" }}>
+            <ShieldCheck size={22} strokeWidth={2} />
           </div>
-          <span>Certi<em>Verify</em></span>
         </div>
-        <h2 className="auth__left-headline">
-          Issue Certificates.<br/>
-          <span>Verify Instantly.</span>
-        </h2>
-        <p className="auth__left-desc">
-          The fastest way to generate and verify 
-          tamper-proof certificates at scale.
-        </p>
-        <div className="auth__left-features">
-          <div><CheckCircle size={16}/> Smart CSV deduplication</div>
-          <div><CheckCircle size={16}/> QR code verification</div>
-          <div><CheckCircle size={16}/> Analytics dashboard</div>
-          <div><CheckCircle size={16}/> Instant PDF generation</div>
-        </div>
-      </div>
-
-      <div className="auth__right">
-        <div className="auth__right-inner">
-          <h1 className="auth__right-title">Welcome back</h1>
-          <p className="auth__right-sub">
-            Sign in to your organiser account
-          </p>
-          {error && (
-            <div className="alert alert-error">
-              <AlertCircle size={16}/> {error}
+        <h1 className="auth-card__title">Welcome back</h1>
+        <p className="auth-card__sub">Sign in to your account</p>
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
+          <div className="field">
+            <label className="field-label" htmlFor="login-email">Email</label>
+            <div className="input-group">
+              <Mail size={15} className="input-group-icon" />
+              <input id="login-email" type="email" className={"input " + (errors.email ? "error" : "")} placeholder="you@example.com" value={form.email} onChange={set("email")} autoComplete="email" />
             </div>
-          )}
-          <form className="auth__form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Email Address</label>
-              <div className="input-wrapper">
-                <Mail size={16} className="input-icon"/>
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                />
+            {errors.email && <span className="field-error">{errors.email}</span>}
+          </div>
+          <div className="field">
+            <label className="field-label" htmlFor="login-password">Password</label>
+            <div style={{ position:"relative" }}>
+              <div className="input-group">
+                <Lock size={15} className="input-group-icon" />
+                <input id="login-password" type={showPw ? "text" : "password"} className={"input " + (errors.password ? "error" : "")} style={{ paddingRight:42 }} placeholder="••••••••" value={form.password} onChange={set("password")} autoComplete="current-password" />
               </div>
+              <button type="button" className="reveal-btn" onClick={() => setShowPw(!showPw)} tabIndex={-1}>
+                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
-            <div className="form-group">
-              <label>Password</label>
-              <div className="input-wrapper">
-                <Lock size={16} className="input-icon"/>
-                <input
-                  name="password"
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                />
-                <button type="button" className="input-action"
-                  onClick={() => setShowPass(!showPass)}>
-                  {showPass ? <EyeOff size={16}/> : <Eye size={16}/>}
-                </button>
-              </div>
-            </div>
-            <button type="submit" 
-              className="btn-primary-auth"
-              disabled={loading}>
-              {loading 
-                ? <><span className="spinner"/> Signing in...</>
-                : <>Sign In <ArrowRight size={16}/></>
-              }
-            </button>
-          </form>
-          <p className="auth__switch">
-            Don't have an account?{' '}
-            <Link to="/register">Create one free</Link>
-          </p>
-        </div>
-      </div>
+            {errors.password && <span className="field-error">{errors.password}</span>}
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ width:"100%",marginTop:4 }} disabled={loading}>
+            {loading ? <><span className="btn-spinner" /> Signing in...</> : "Sign in"}
+          </button>
+        </form>
+        <div className="auth-footer">Don't have an account? <Link to="/register">Create one</Link></div>
+      </motion.div>
     </div>
-  );
+  )
 }

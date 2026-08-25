@@ -1,6 +1,6 @@
 import qrcode
 import os
-import io
+import tempfile
 
 def generate_qr(cert_id, verify_base_url=None):
     if verify_base_url is None:
@@ -23,8 +23,7 @@ def generate_qr(cert_id, verify_base_url=None):
 
     img = qr.make_image(fill_color="black", back_color="white")
 
-    # ✅ Save to /tmp which persists during same request on Render
-    output_dir = "/tmp/qrcodes"
+    output_dir = os.path.join(tempfile.gettempdir(), "qrcodes")
     os.makedirs(output_dir, exist_ok=True)
     file_path = os.path.join(output_dir, f"{cert_id}.png")
     img.save(file_path)

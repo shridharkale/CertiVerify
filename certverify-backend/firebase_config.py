@@ -1,7 +1,7 @@
 import os
 import sys
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import auth, credentials, firestore, storage
 
 # ── Validate required env vars before touching Firebase ────────────────────────
 REQUIRED_VARS = [
@@ -41,3 +41,5 @@ if not firebase_admin._apps:
     })
 
 db = firestore.client()
+# Re-export so routes can `from firebase_config import db, auth`
+__all__ = ["db", "auth"]
