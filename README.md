@@ -11,7 +11,7 @@
 [![Deployed on Render](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat-square&logo=render)](https://render.com/)
 [![Deployed on GitHub Pages](https://img.shields.io/badge/Frontend-GitHub%20Pages-222222?style=flat-square&logo=githubpages)](https://pages.github.com/)
 
-> A full-stack, **data science–themed** certificate generation and instant-verification platform. Built as a portfolio project by a VTU Data Science engineering student.
+> A full-stack, certificate generation and instant-verification platform. Built as a portfolio project by a VTU ISE engineering student.
 
 **Live Demo:** [https://shridharkale.github.io/CertiVerify/](https://shridharkale.github.io/CertiVerify/)  
 **API Base:** [https://certiverify-kz39.onrender.com/api](https://certiverify-kz39.onrender.com/api)
@@ -276,7 +276,7 @@ Example: `CERT-2026-X8Y9`
 
 ## 🧑‍💻 Developer
 
-**Shridhar Kale** — VTU, B.E. Data Science Engineering  
+**Shridhar Kale** — VTU, B.E. Information science and engineering 
 
 [![GitHub](https://img.shields.io/badge/GitHub-shridharkale-181717?style=flat-square&logo=github)](https://github.com/shridharkale)
 
