@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true)
     try {
-      const res = await api.post('/auth/login', { email, password })
+      const res = await api.post('/api/auth/login', { email, password })
       return persistSession(res.data.token, res.data.user)
     } catch (err) {
       throw new Error(getApiError(err, 'Sign in failed'))
@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
   const register = async (email, password, name) => {
     setLoading(true)
     try {
-      const res = await api.post('/auth/register', { email, password, name })
+      const res = await api.post('/api/auth/register', { email, password, name })
       if (!res.data?.token) {
         throw new Error(res.data?.error || 'Account created. Please sign in.')
       }
