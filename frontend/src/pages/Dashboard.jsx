@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "../utils/auth"
 import { useToast } from "../utils/useToast"
 import Navbar from "../components/Navbar"
-import api, { getApiError } from "../utils/api"
+import api from "../utils/api"
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -83,7 +83,7 @@ export default function Dashboard() {
       fd.append("organisation", form.issuedBy || user?.email || "")
       fd.append("file", file)
       const tick = setInterval(() => setProgress((p) => Math.min(p + 8, 88)), 300)
-      await api.post("/certificates/issue", fd)
+      await api.post("/api/certificates/issue", fd)
       clearInterval(tick); setProgress(100)
       showToast("Certificates issued successfully", "success")
       setTimeout(() => { setFile(null); setPreview([]); setForm({ eventName: "", eventDate: "", issuedBy: "" }); setProgress(0); setTab("certs"); loadStats(); loadCerts() }, 800)

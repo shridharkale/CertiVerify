@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShieldCheck, ShieldX, Search, Loader2, Download, Lock, Clock } from 'lucide-react'
 import Navbar from '../components/Navbar'
-import { verifyCertificate, getApiError } from '../utils/api'
+import { verifyCertificate } from '../utils/api'
 import { useToast } from '../utils/useToast'
 
 const fadeUp = {
@@ -115,7 +115,7 @@ export default function Verify() {
             <form className="verify-form" onSubmit={(e) => { e.preventDefault(); handleVerify() }}>
               <input
                 className="input"
-                placeholder={tab === 'id' ? 'e.g. CERT-2024-ABCD1234' : 'Paste QR data or verify URL here…'}
+                placeholder={tab === 'id' ? 'e.g. CERT-2024-ABCD1234' : 'Paste QR data or verify URL hereâ€¦'}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
