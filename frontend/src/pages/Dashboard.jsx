@@ -39,33 +39,23 @@ export default function Dashboard() {
 
   async function loadStats() {
     try {
-      const r = await api.get("/certificates/list")
-      const list = r.data.certificates || []
-      const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
-      const events = new Set(list.map((c) => c.event_name).filter(Boolean))
-      const recent = list.filter((c) => {
-        const t = Date.parse(c.created_at || c.event_date || "")
-        return Number.isFinite(t) && t >= monthAgo
-      }).length
-      setStats({ total: list.length, events: events.size, recent })
-    } catch {
-      try {
-        const r = await api.get("/certificates/public-stats")
-        setStats((s) => ({ ...s, total: r.data.total || 0 }))
-      } catch { /* ignore */ }
-    }
+      const r = await api.get("/api/certificates/public-stats")
+      setStats({ total: r.data.total || 0, events: 0, recent: 0 })
+    } catch {}
   }
+
   async function loadCerts() {
     setCertsLoading(true)
     try {
-      const r = await api.get("/certificates/list")
+      const r = await api.get("/api/certificates/list")
       setCerts(r.data.certificates || [])
-    } catch (err) {
-      showToast(getApiError(err, "Could not load certificates"), "error")
+    } catch {
+      showToast("Could not load certificates", "error")
     } finally {
       setCertsLoading(false)
     }
   }
+
   function handleFile(f) {
     if (!f || !f.name.endsWith(".csv")) { showToast("Please upload a .csv file", "error"); return }
     setFile(f)
@@ -73,23 +63,26 @@ export default function Dashboard() {
     reader.onload = (e) => { const rows = e.target.result.split("\n").filter(Boolean); setPreview(rows.slice(0, 5).map((r) => r.split(","))) }
     reader.readAsText(f)
   }
+
   async function handleIssue() {
     if (!form.eventName || !form.eventDate || !file) { showToast("Fill in event details and upload a CSV", "error"); return }
     setIssuing(true); setProgress(0)
     try {
       const fd = new FormData()
-      fd.append("event_name", form.eventName)
-      fd.append("event_date", form.eventDate)
-      fd.append("organisation", form.issuedBy || user?.email || "")
-      fd.append("file", file)
+      fd.append("event_name", form.eventName); fd.append("event_date", form.eventDate)
+      fd.append("issued_by", form.issuedBy || user?.email); fd.append("file", file)
       const tick = setInterval(() => setProgress((p) => Math.min(p + 8, 88)), 300)
-      await api.post("/api/certificates/issue", fd)
+      await api.post("/api/certificates/issue", fd, { headers: { "Content-Type": "multipart/form-data" } })
       clearInterval(tick); setProgress(100)
       showToast("Certificates issued successfully", "success")
-      setTimeout(() => { setFile(null); setPreview([]); setForm({ eventName: "", eventDate: "", issuedBy: "" }); setProgress(0); setTab("certs"); loadStats(); loadCerts() }, 800)
-    } catch (err) { showToast(getApiError(err, "Issue failed"), "error"); setProgress(0) }
-    finally { setIssuing(false) }
+      setTimeout(() => { setFile(null); setPreview([]); setForm({ eventName: "", eventDate: "", issuedBy: "" }); setProgress(0); setTab("certs") }, 800)
+    } catch {
+      showToast("Issue failed", "error"); setProgress(0)
+    } finally {
+      setIssuing(false)
+    }
   }
+
   const handleLogout = async () => { await logout(); navigate("/login") }
   const greeting = () => { const h = new Date().getHours(); return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening" }
 
@@ -171,7 +164,7 @@ export default function Dashboard() {
                       <>
                         <CloudUpload size={32} className="dropzone__icon" />
                         <p className="dropzone__label">Drop CSV here or <span className="dropzone__link">browse</span></p>
-                        <p style={{ fontSize:12, color:"var(--text-subtle)", marginTop:4 }}>Columns: name, email, role (optional)</p>
+                        <p style={{ fontSize:12, color:"var(--text-subtle)", marginTop:4 }}>Columns: name, email, role</p>
                       </>
                     )}
                   </div>
@@ -225,7 +218,7 @@ export default function Dashboard() {
                             <td>{c.event_name}</td>
                             <td style={{ fontSize:13, color:"var(--text-muted)" }}>{c.event_date || c.issued_date || c.created_at}</td>
                             <td><span className="cert-id">{c.cert_id}</span></td>
-                            <td>{c.cert_id && <a href={`${(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')}/certificates/download/${c.cert_id}`} className="btn btn-icon" target="_blank" rel="noopener noreferrer"><Download size={13} /></a>}</td>
+                            <td>{c.cert_id && <a href={`${import.meta.env.VITE_API_BASE_URL}/api/certificates/download/${c.cert_id}`} className="btn btn-icon" target="_blank" rel="noopener noreferrer"><Download size={13} /></a>}</td>
                           </tr>
                         ))}</tbody>
                       </table>
