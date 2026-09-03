@@ -40,7 +40,7 @@ export default function Dashboard() {
   async function loadStats() {
     try {
       const r = await api.get("/api/certificates/public-stats")
-      setStats({ total: r.data.total || 0, events: 0, recent: 0 })
+      setStats({ total: r.data.total || 0, events: r.data.events || 0, recent: r.data.recent || 0 })
     } catch {}
   }
 
