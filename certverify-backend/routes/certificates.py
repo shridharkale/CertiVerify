@@ -363,9 +363,29 @@ def download_certificate(cert_id):
 @limiter.limit("60 per hour")
 def public_stats():
     try:
-        docs  = db.collection("certificates").stream()
-        total = sum(1 for _ in docs)
-        return jsonify({"total": total}), 200
+        from datetime import datetime, timezone, timedelta
+        docs = list(db.collection("certificates").stream())
+        total = len(docs)
+        event_names = set()
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        recent = 0
+        for doc in docs:
+            d = doc.to_dict()
+            if d.get("event_name"):
+                event_names.add(d["event_name"])
+            created = d.get("created_at")
+            if created:
+                if hasattr(created, "tzinfo") and created.tzinfo:
+                    if created >= thirty_days_ago:
+                        recent += 1
+                elif isinstance(created, str):
+                    try:
+                        dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                        if dt >= thirty_days_ago:
+                            recent += 1
+                    except:
+                        pass
+        return jsonify({"total": total, "events": len(event_names), "recent": recent}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
